@@ -1,3 +1,6 @@
+## AFTER YOU DOWNLOAD THIS FILE, CHANGE THE OS PATHS SO THE CONVERTED FILES
+## ARE IN THE RIGHT FOLDERS
+
 ## from youtube to mp3 or wac
 from youtube_dl import YoutubeDL
 from moviepy.editor import *
