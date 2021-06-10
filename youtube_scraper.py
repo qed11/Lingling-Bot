@@ -7,7 +7,7 @@ from moviepy.editor import *
 import os
 
 ## from youtube to mp4 to mp3
-def download_one_audio(url):
+def download_one_audio(url, wav = True):
     # download mp4 in the os directory and return the title as well as duration
     os.chdir(os.path.dirname(os.path.realpath(__file__))+"/Downloads/Videos/")
     ydl_opts = {
@@ -25,7 +25,10 @@ def download_one_audio(url):
     title = title.replace(":", " -")
     video = VideoFileClip(title + ".mp4")
     os.chdir(os.path.dirname(os.path.realpath(__file__))+"/Downloads/Audios/")
-    video.audio.write_audiofile(title + ".mp3")
+    if wav is True:
+        video.audio.write_audiofile(title + ".wav")
+    else:
+        video.audio.write_audiofile(title + ".mp3")
 
     return title, duration
 
