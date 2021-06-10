@@ -25,7 +25,7 @@ def download_one_audio(url):
     title = title.replace(":", " -")
     video = VideoFileClip(title + ".mp4")
     os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot/Downloads/Audios/")
-    video.audio.write_audiofile(title + ".wav")
+    video.audio.write_audiofile(title + ".mp3")
 
     return title, duration
 
