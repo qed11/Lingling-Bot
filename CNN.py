@@ -2,6 +2,14 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.models
+# possible image recognition baseline models to use
+alexnet = torchvision.models.alexnet(pretrained=True)
+inception = torchvision.models.inception.inception_v3(pretrained=True)
+vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
+vgg19 = torchvision.models.vgg.vgg19(pretrained=True)
+resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
+resnet152 = torchvision.models.resnet.resnet152(pretrained=True)
 
 class CNN(nn.Module):
     def __init__(self):
