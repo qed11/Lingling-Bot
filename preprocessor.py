@@ -64,7 +64,7 @@ def label_data(filename):
 
 def hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5, fmax = 8000):
   """
-  Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time.
+  Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time, with instrument labels.
   """
   label = np.array(label_data(file))
   mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
@@ -78,4 +78,16 @@ def hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5,
     new_array = np.array(new_array)
     new_array = np.expand_dims(new_array, 0)
     arrays = np.append(arrays, new_array, axis = 0)                                                         #Keep adding on mapped mel spectrums
+  return arrays
+
+def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5, fmax = 8000):
+  """
+  Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time, without instrument labels.
+  """
+  mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
+  mels = gen_mel(file, sample_freq, n_fft, mel_bank)                                                        #Get the value of the mel bins for each point in time
+  array_length = mels.shape[1]                                                                              #Get length of the mels array
+  array = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                    #Initialize the list of mapped mel spectrums
+  for i in range(1, array_length):
+    arrays = np.append(arrays, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
   return arrays
