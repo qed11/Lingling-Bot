@@ -51,14 +51,14 @@ def plot_mels(mel_array, size):
     array[int(hilbert[i][0]), int(hilbert[i][1])] = mels[i]                     #Fill array
   return array
 
-label_dic = [VLN, VLA, CEL, DBS, HRP, PCO, FLT, CLT, OBO, EHN, BSN, BCL, TPT, FHN, TBN, EUP, TUB, PNO, HSD, PER]
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'EUP', 'TUB', 'PNO', 'HSD', 'PER']
 
 def label_data(filename):
   fn = filename.upper()
   labels = fn.split('.')[0].split('_')
   out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   for i, instrument in enumerate(label_dic):
-    if instrument in label:
+    if instrument in labels:
       out[i] = 1
   return out
 
@@ -70,8 +70,13 @@ def hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5,
   mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
   mels = gen_mel(file, sample_freq, n_fft, mel_bank)                                                        #Get the value of the mel bins for each point in time
   array_length = mels.shape[1]                                                                              #Get length of the mels array
-  array = np.array(plot_mels(mels[:, 0], size), label)                                                      #Initialize the list of mapped mel spectrums
+  array = (plot_mels(mels[:, 0], size), label)                                                              #Initialize the list of mapped mel spectrums
+  print(array)
+  array = np.array(array)
   arrays = np.expand_dims(array, 0)
   for i in range(1, array_length):
-    arrays = np.append(arrays, np.expand_dims(np.array(plot_mels(mels[:, i], size), label), 0), axis = 0)   #Keep adding on mapped mel spectrums
+    new_array = (plot_mels(mels[:, i], size), label)
+    new_array = np.array(new_array)
+    new_array = np.expand_dims(new_array, 0)
+    arrays = np.append(arrays, new_array, axis = 0)                                                         #Keep adding on mapped mel spectrums
   return arrays
