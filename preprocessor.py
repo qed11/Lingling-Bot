@@ -51,12 +51,12 @@ def plot_mels(mel_array, size):
     array[int(hilbert[i][0]), int(hilbert[i][1])] = mels[i]                     #Fill array
   return array
 
-label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
 
 def label_data(filename):
   fn = filename.upper()
   labels = fn.split('.')[0].split('_')
-  out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   for i, instrument in enumerate(label_dic):
     if instrument in labels:
       out[i] = 1
