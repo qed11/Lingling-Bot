@@ -71,7 +71,6 @@ def hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5,
   mels = gen_mel(file, sample_freq, n_fft, mel_bank)                                                        #Get the value of the mel bins for each point in time
   array_length = mels.shape[1]                                                                              #Get length of the mels array
   array = (plot_mels(mels[:, 0], size), label)                                                              #Initialize the list of mapped mel spectrums
-  print(array)
   array = np.array(array)
   arrays = np.expand_dims(array, 0)
   for i in range(1, array_length):
