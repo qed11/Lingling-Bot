@@ -51,15 +51,27 @@ def plot_mels(mel_array, size):
     array[int(hilbert[i][0]), int(hilbert[i][1])] = mels[i]                     #Fill array
   return array
 
+label_dic = [VLN, VLA, CEL, DBS, HRP, PCO, FLT, CLT, OBO, EHN, BSN, BCL, TPT, FHN, TBN, EUP, TUB, PNO, HSD, PER]
+
+def label_data(filename):
+  fn = filename.upper()
+  labels = fn.split('.')[0].split('_')
+  out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  for i, instrument in enumerate(label_dic):
+    if instrument in label:
+      out[i] = 1
+  return out
+
 def hilbert_data(file, sample_freq = 22050, n_fft = 65536, size = 128, fmin = 5, fmax = 8000):
   """
   Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time.
   """
+  label = np.array(label_data(file))
   mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
   mels = gen_mel(file, sample_freq, n_fft, mel_bank)                                                        #Get the value of the mel bins for each point in time
   array_length = mels.shape[1]                                                                              #Get length of the mels array
-  array = plot_mels(mels[:, 0], size)                                                                       #Initialize the list of mapped mel spectrums
+  array = np.array(plot_mels(mels[:, 0], size), label)                                                      #Initialize the list of mapped mel spectrums
   arrays = np.expand_dims(array, 0)
   for i in range(1, array_length):
-    arrays = np.append(arrays, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
+    arrays = np.append(arrays, np.expand_dims(np.array(plot_mels(mels[:, i], size), label), 0), axis = 0)   #Keep adding on mapped mel spectrums
   return arrays
