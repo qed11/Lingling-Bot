@@ -23,6 +23,8 @@ def download_one_audio(url, wav = True):
     title = info['title']
     duration = info["duration"]
     title = title.replace(":", " -")
+    title = title.replace("\"", "'")
+    title = title.replace("|", "_")
     video = VideoFileClip(title + ".mp4")
     os.chdir(os.path.dirname(os.path.realpath(__file__))+"/Downloads/Audios/")
     if wav is True:
