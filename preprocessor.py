@@ -95,29 +95,31 @@ def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len =
 def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
   label = np.array(label_data(file))
   x, freq = lb.load(file, sample_freq)
-  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)
-  size = len(data)
-  num_ints = floor(len(data[0])/size)
-  array = (data[:, 0:127], label)
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)  #Get spectrogram
+  size = len(data)                                                                                                          #Get size of spectrogram (num bins)
+  add_on = size - 1
+  num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
+  array = (data[:, 0:add_on], label)                                                                                        #Initialize the list of spectrograms
   array = np.array(array)
   arrays = np.expand_dims(array, 0)
   for i in range(1, num_ints):
-    stt_ind = i*128
-    fin_ind = i*128 + 127
+    stt_ind = i*size/4
+    fin_ind = i*size/4 + add_on
     new_array = (data[:, stt_ind:fin_ind], label)
     new_array = np.array(new_array)
     new_array = np.expand_dims(new_array, 0)
-    arrays = np.append(arrays, new_array, axis = 0)
+    arrays = np.append(arrays, new_array, axis = 0)                                                                         #Keep adding on spectrograms
   return arrays
 
 def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
   x, freq = lb.load(file, sample_freq)
-  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)
-  size = len(data)
-  num_ints = floor(len(data[0])/size)
-  array = np.expand_dims(data[:, 0:127], 0)
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)  #Get spectrogram
+  size = len(data)                                                                                                          #Get size of spectrogram (num bins)
+  add_on = size - 1
+  num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
+  array = np.expand_dims(data[:, 0:127], 0)                                                                                 #Initialize the list of spectrograms
   for i in range(1, num_ints):
-    stt_ind = i*128
-    fin_ind = i*128 + 127
-    arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)
+    stt_ind = i*size/4
+    fin_ind = i*size/4 + add_on
+    arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)                                       #Keep adding on spectrograms
   return arrays
