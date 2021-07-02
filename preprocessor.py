@@ -36,7 +36,7 @@ def gen_mel(file, sample_freq, n_fft, mel_bank, win_len):
   """
   x, freq = lb.load(file, sample_freq)                                                          #Load in the file
   fourier = np.abs(lb.stft(x, n_fft, win_length = win_len))                                     #Take the magnitudes of a short time fourier transform
-  return lb.amplitude_to_db(np.matmul(mel_bank, fourier))                                       #Multiply the fourier transform bins with the mel transformation matrix to get mel-scaled bins
+  return lb.amplitude_to_db(np.matmul(mel_bank, fourier), ref = np.max)                         #Multiply the fourier transform bins with the mel transformation matrix to get mel-scaled bins
 
 def plot_mels(mel_array, size):
   """
