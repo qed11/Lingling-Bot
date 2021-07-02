@@ -34,9 +34,9 @@ def gen_mel(file, sample_freq, n_fft, mel_bank, win_len):
   """
   Given a file and a mel transformation matrix, returns the mel spectrums across time in that file.
   """
-  x, freq = lb.load(file, sample_freq)                      #Load in the file
-  fourier = np.abs(lb.stft(x, n_fft, win_length = win_len)) #Take the magnitudes of a short time fourier transform
-  return np.matmul(mel_bank, fourier)                       #Multiply the fourier transform bins with the mel transformation matrix to get mel-scaled bins
+  x, freq = lb.load(file, sample_freq)                                                          #Load in the file
+  fourier = lb.amplitude_to_db(np.abs(lb.stft(x, n_fft, win_length = win_len)), ref = np.max)   #Take the magnitudes of a short time fourier transform
+  return np.matmul(mel_bank, fourier)                                                           #Multiply the fourier transform bins with the mel transformation matrix to get mel-scaled bins
 
 def plot_mels(mel_array, size):
   """
@@ -90,4 +90,34 @@ def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len =
   array = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                    #Initialize the list of mapped mel spectrums
   for i in range(1, array_length):
     arrays = np.append(arrays, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
+  return arrays
+
+def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
+  label = np.array(label_data(file))
+  x, freq = lb.load(file, sample_freq)
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)
+  size = len(data)
+  num_ints = floor(len(data[0])/size)
+  array = (data[:, 0:127], label)
+  array = np.array(array)
+  arrays = np.expand_dims(array, 0)
+  for i in range(1, num_ints):
+    stt_ind = i*128
+    fin_ind = i*128 + 127
+    new_array = (data[:, stt_ind:fin_ind], label)
+    new_array = np.array(new_array)
+    new_array = np.expand_dims(new_array, 0)
+    arrays = np.append(arrays, new_array, axis = 0)
+  return arrays
+
+def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
+  x, freq = lb.load(file, sample_freq)
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)
+  size = len(data)
+  num_ints = floor(len(data[0])/size)
+  array = np.expand_dims(data[:, 0:127], 0)
+  for i in range(1, num_ints):
+    stt_ind = i*128
+    fin_ind = i*128 + 127
+    arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)
   return arrays
