@@ -70,15 +70,12 @@ def hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048, size 
   mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
   mels = gen_mel(file, sample_freq, n_fft, mel_bank, win_len)                                               #Get the value of the mel bins for each point in time
   array_length = mels.shape[1]                                                                              #Get length of the mels array
-  array = (plot_mels(mels[:, 0], size), label)                                                              #Initialize the list of mapped mel spectrums
-  array = np.array(array)
-  arrays = np.expand_dims(array, 0)
+  arrays = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                   #Initialize the list of mapped mel spectrums
+  label_array = np.expand_dims(label, 0)                                                                    #Initialize array of labels
   for i in range(1, array_length):
-    new_array = (plot_mels(mels[:, i], size), label)
-    new_array = np.array(new_array)
-    new_array = np.expand_dims(new_array, 0)
-    arrays = np.append(arrays, new_array, axis = 0)                                                         #Keep adding on mapped mel spectrums
-  return arrays
+    arrays = np.append(arrays, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
+    label_array = np.append(label_array, np.expand_dims(label, 0), axis = 0)                                #Keep adding on labels
+  return arrays, label_array
 
 def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048, size = 128, fmin = 5, fmax = 8000):
   """
@@ -99,17 +96,14 @@ def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
   add_on = size - 1
   num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
-  array = (data[:, 0:add_on], label)                                                                                        #Initialize the list of spectrograms
-  array = np.array(array)
-  arrays = np.expand_dims(array, 0)
+  arrays = np.expand_dims(data[:, 0:127], 0)                                                                                #Initialize the list of spectrograms
+  label_array = np.expand_dims(label, 0)                                                                                    #Initialize array of labels
   for i in range(1, num_ints):
     stt_ind = i*size/4
     fin_ind = i*size/4 + add_on
-    new_array = (data[:, stt_ind:fin_ind], label)
-    new_array = np.array(new_array)
-    new_array = np.expand_dims(new_array, 0)
-    arrays = np.append(arrays, new_array, axis = 0)                                                                         #Keep adding on spectrograms
-  return arrays
+    arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)                                       #Keep adding on spectrograms
+    label_array = np.append(label_array, np.expand_dims(label, 0), axis = 0)                                                #Keep adding on labels
+  return arrays, label_array
 
 def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
   x, freq = lb.load(file, sample_freq)
@@ -117,7 +111,7 @@ def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_l
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
   add_on = size - 1
   num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
-  array = np.expand_dims(data[:, 0:127], 0)                                                                                 #Initialize the list of spectrograms
+  arrays = np.expand_dims(data[:, 0:127], 0)                                                                                #Initialize the list of spectrograms
   for i in range(1, num_ints):
     stt_ind = i*size/4
     fin_ind = i*size/4 + add_on
