@@ -86,8 +86,8 @@ def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len =
   array_length = mels.shape[1]                                                                              #Get length of the mels array
   array = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                    #Initialize the list of mapped mel spectrums
   for i in range(1, array_length):
-    arrays = np.append(arrays, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
-  return arrays
+    array = np.append(array, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
+  return array
 
 def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
   label = np.array(label_data(file))
