@@ -100,5 +100,3 @@ def get_autoencoder_data(from_csv= False, csv_path = None, win_len = 2048, hilbe
     set_size = int(set_percent*len(dataset))                                                        #Length of test and validation sets
     return dt.random_split(dataset, [len(dataset) - 2*set_size, set_size, set_size])                #Return datasets in order of training set, validation set, test set
 
-## Test the Functions
-get_autoencoder_data()
