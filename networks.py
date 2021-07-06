@@ -13,8 +13,9 @@ resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
 resnet152 = torchvision.models.resnet.resnet152(pretrained=True)
 
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self, name = 'CNN'):
         super(CNN, self).__init__()
+        self.name = name
         self.conv1 = nn.Conv2d(1, 5, 3, padding = 1) #128*128*3 - > 128*128*5
         self.pool = nn.MaxPool2d(2, 2) #128*128*10 - 64*64*10 - 32*32*40
         self.conv2 = nn.Conv2d(5, 10, 3, padding = 1) #128*128*5 -> 128*128*10
@@ -35,8 +36,10 @@ class CNN(nn.Module):
         return x
 
 class Autoencoder(nn.Module):
-    def __init__(self):
+    def __init__(self, name = 'auto'):
+
         super(Autoencoder, self).__init__()
+        self.name = name
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 16, 3, padding = 1), 
             nn.Conv2d(16, 32, 3, padding = 1),
