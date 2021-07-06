@@ -37,7 +37,6 @@ class CNN(nn.Module):
 
 class Autoencoder(nn.Module):
     def __init__(self, name = 'auto'):
-
         super(Autoencoder, self).__init__()
         self.name = name
         self.encoder = nn.Sequential(
