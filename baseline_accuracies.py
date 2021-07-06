@@ -107,18 +107,76 @@ training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sari
 # training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_spectrogram.pt")
 
 ## Save Features
-def save_features(loader, path):
-    types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+def save_alex_features(loader):
+    # the label of instruments
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+    # the path of where to store the features
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet/"
+    # define transformations
+    transformations = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.CenterCrop(224), # make sure the size is right
+        transforms.ToTensor(),
+    ])
+    # create a pre-trained model folder if not exist
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+    # store the features
     i = 0
     for images, label in loader:
-      features = alexnet.features(images)
-      features = torch.from_numpy(features.detach().numpy())
-      folder = path + str(types[label])
-      if not os.path.isdir(folder):
-          os.mkdir(folder)
-      torch.save(features.squeeze(0), folder + "/" + str(i) + '.tensor')
-      i += 1
+        # the following are transformations applied to the image to work with alex net
+        images = transformations(images)
+        images = torch.stack((images, images, images))
+        images = np.transpose(images, [1,0,2,3])
+        # get the features
+        features = alexnet.features(images)
+        features = torch.from_numpy(features.detach().numpy())
+        # get the folder names for the features of different instruments
+        name = ''
+        for j in range(len(label.squeeze())):
+            if int(label.squeeze()[j].item()) == 1:
+                name = str(name) + str(label_dic[j]) + "_"
+        # if the label is all 0, then skip over the file
+        if name == '':
+            continue
+        folder = path + name + "/"
+        #print(folder)
+        # make the folders and save the features
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
+        torch.save(features.squeeze(0), folder + str(i) + '.tensor')
+        i += 1
 
+save_alex_features(training_hilb)
+
+##
+for i in range(len(label.squeeze())):
+    if int(label.squeeze()[i].item()) == 1:
+        name = str(name) + str(label_dic[i]) + "_"
+##
+i = 0
+for image, label in training_hilb:
+    print(image)
+    print(image.shape)
+    print(label)
+    print(label.shape)
+
+    i+= 1
+    img = np.transpose(image, [1,2,0])
+    plt.imshow(img)
+    #plt.show()
+    if i > 2:
+        break
+print(i)
+
+
+
+
+
+
+
+##### CODE BELOW DOESN'T WORK YET
 ## Save Features
 
 train_loader, val_loader, test_loader = load_data('/content/gdrive/MyDrive/APS360/week4/', bs)
