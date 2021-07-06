@@ -83,7 +83,7 @@ def save_data(win_len = 2048, hilbert = True, save_name = None):
     torch.save(full_set, save_path)
     return save_path
 
-def get_data(save_path = None, set_percent = 0.1):
+def get_data(save_path = None, set_percent = 0.1, bs = 1):
     '''
     get the data saves at save_path and return the training, validation, and testing
     '''
@@ -91,17 +91,33 @@ def get_data(save_path = None, set_percent = 0.1):
     load = torch.load(save_path)
     set_size = int(set_percent*len(load))
     training, validation, testing = dt.random_split(load, [len(load) - 2*set_size, set_size, set_size])
-    return training, validation, testing
+    train = dt.DataLoader(training, batch_size = bs, shuffle=True)
+    val = dt.DataLoader(validation, batch_size = bs, shuffle=True)
+    test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
+    return train, val, test
 
-## Get the hilbert data
+## Store Hilbert Data
 # get train, valid, test from labelled data
 save_path = save_data(hilbert = True, save_name = "labelled_hilbert")
-training, validation, testing = get_data(save_path = save_path)
-
-## Get the Spectrogram data
+## Store Spectrogram Data
 # get train, valid, test from labelled data
 save_path_spec = save_data(hilbert = False, save_name = "labelled_spectrogram")
-training_spec, validation_spec, testing_spec = get_data(save_path = save_path_spec)
+## Load data for hilbert and spectrogram
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert.pt")
+# training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_spectrogram.pt")
+
+## Save Features
+def save_features(loader, path):
+    types = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
+    i = 0
+    for images, label in loader:
+      features = alexnet.features(images)
+      features = torch.from_numpy(features.detach().numpy())
+      folder = path + str(types[label])
+      if not os.path.isdir(folder):
+          os.mkdir(folder)
+      torch.save(features.squeeze(0), folder + "/" + str(i) + '.tensor')
+      i += 1
 
 ## Save Features
 
