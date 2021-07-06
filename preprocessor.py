@@ -1,5 +1,6 @@
 import numpy as np
 import librosa as lb
+from math import floor
 
 def draw_hilbert(dim, startx = 0, starty = 0, pos_step = True, xfirst = False):
     """
@@ -99,8 +100,8 @@ def spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048):
   arrays = np.expand_dims(data[:, 0:127], 0)                                                                                #Initialize the list of spectrograms
   label_array = np.expand_dims(label, 0)                                                                                    #Initialize array of labels
   for i in range(1, num_ints):
-    stt_ind = i*size/4
-    fin_ind = i*size/4 + add_on
+    stt_ind = int(i*size/4)
+    fin_ind = int(i*size/4 + add_on)
     arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)                                       #Keep adding on spectrograms
     label_array = np.append(label_array, np.expand_dims(label, 0), axis = 0)                                                #Keep adding on labels
   return arrays, label_array
