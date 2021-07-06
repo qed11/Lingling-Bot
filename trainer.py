@@ -14,7 +14,7 @@ import random
 from PIL import Image
 os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
 from youtube_scraper import download_csv_audio
-#from preprocessor import autoencoder_hilbert_data, autoencoder_spectrogram_data
+from preprocessor import *
 
 ##Set all the seeds to ensure reproducability
 random.seed(1000)
@@ -23,30 +23,6 @@ torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 
 ## Functions
-def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048, size = 128, fmin = 5, fmax = 8000):
-    """
-    Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time, without instrument labels.
-    """
-    mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
-    mels = gen_mel(file, sample_freq, n_fft, mel_bank, win_len)                                               #Get the value of the mel bins for each point in time
-    array_length = mels.shape[1]                                                                              #Get length of the mels array
-    array = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                    #Initialize the list of mapped mel spectrums
-    for i in range(1, array_length):
-        array = np.append(array, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
-    return array
-
-def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
-    x, freq = lb.load(file, sample_freq)
-    data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)  #Get spectrogram
-    size = len(data)                                                                                                          #Get size of spectrogram (num bins)
-    add_on = size - 1
-    num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
-    arrays = np.expand_dims(data[:, 0:127], 0)                                                                                #Initialize the list of spectrograms
-    for i in range(1, num_ints):
-        stt_ind = i*size/4
-        fin_ind = i*size/4 + add_on
-        arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)                                       #Keep adding on spectrograms
-    return arrays
 def get_autoencoder_data(from_csv= False, csv_path = None, win_len = 2048, hilbert = True, set_percent = 0.1):
     """
     Either get from a csv file with youtube links using from_csv and csv_path
