@@ -1,13 +1,23 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import os
+import time
+import random
+from PIL import Image
+import librosa as lb
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 from torch.nn.modules.conv import Conv2d, Conv3d
 import torchvision.models
-import os
-from trainer import load_data
-from networks import CNN
+import torch.utils.data as dt
+import torchvision.transforms as transforms
 
+os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
+from networks import CNN
+from preprocessor import autoencoder_hilbert_data, autoencoder_spectrogram_data
 
 ## import pretrained models
 alexnet = torchvision.models.alexnet(pretrained=True)
@@ -71,7 +81,6 @@ def load_data_alex(path, bs):
 
 
 
-##
 ## Imports
 import numpy as np
 import matplotlib.pyplot as plt
@@ -438,23 +447,3 @@ def load_data(new_path):
 
 ## Test the Functions
 #load_data("/Data/Hilbert/" + folder + '/')
-##
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn.modules.conv import Conv2d, Conv3d
-import torchvision.models
-import os
-from networks import CNN
-## import pretrained models
-alexnet = torchvision.models.alexnet(pretrained=True)
-inception = torchvision.models.inception.inception_v3(pretrained=True)
-vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
-resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
-## Save Features
-cur_path = os.getcwd()
-data_path = cur_path + "/Images/"
-
-bs = 1
-train_loader, val_loader, test_loader = load_data("/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/Beethoven5/")
