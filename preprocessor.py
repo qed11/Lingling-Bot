@@ -89,10 +89,10 @@ def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len =
     array = np.append(array, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
   return array
 
-def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
+def spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048):
   label = np.array(label_data(file))
   x, freq = lb.load(file, sample_freq)
-  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)  #Get spectrogram
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_fft = n_fft, win_length = win_len)), ref = np.max)  #Get spectrogram
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
   add_on = size - 1
   num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
@@ -105,9 +105,9 @@ def spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
     label_array = np.append(label_array, np.expand_dims(label, 0), axis = 0)                                                #Keep adding on labels
   return arrays, label_array
 
-def autoencoder_spectrogram_data(file, sample_freq = 22050, n_ftt = 65536, win_len = 2048):
+def autoencoder_spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048):
   x, freq = lb.load(file, sample_freq)
-  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_ftt = n_ftt, win_length = win_len)), ref = np.max)  #Get spectrogram
+  data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_fft = n_fft, win_length = win_len)), ref = np.max)  #Get spectrogram
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
   add_on = size - 1
   num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points

@@ -25,8 +25,14 @@ inception = torchvision.models.inception.inception_v3(pretrained=True)
 vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
 resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
 
-## Functions to save and create labelled datasets
-def save_data(win_len = 2048, hilbert = True, set_percent = 0.1, save_name = None):
+##Set all the seeds to ensure reproducability
+random.seed(1000)
+np.random.seed(1000)
+torch.manual_seed(1000)
+torch.cuda.manual_seed(1000)
+
+## Functions to save and create labelled dataset
+def save_data(win_len = 2048, hilbert = True, save_name = None):
     """
     sort datasets for the labelled data
     win_len is the how many samples are taken from a music clip
@@ -76,23 +82,26 @@ def save_data(win_len = 2048, hilbert = True, set_percent = 0.1, save_name = Non
     torch.save(full_set, save_path)
     return save_path
 
-def get_data(save_path):
+def get_data(save_path = None, set_percent = 0.1):
     '''
     get the data saves at save_path and return the training, validation, and testing
     '''
+    # load data from the path
     load = torch.load(save_path)
-    trainig, validation, testing = dt.random_split(load, [len(dataset) - 2*set_size, set_size, set_size])
+    set_size = int(set_percent*len(load))
+    training, validation, testing = dt.random_split(load, [len(load) - 2*set_size, set_size, set_size])
     return training, validation, testing
 
-## Get the labelled datasets
-save_path = save_data(save_name = "labelled")
-training, validation, testing = get_data(save_path)
+## Get the hilbert data
+# get train, valid, test from labelled data
+save_path = save_data(hilbert = True, save_name = "labelled_hilbert")
+training, validation, testing = get_data(save_path = save_path)
 
-##
-full = dt.TensorDataset(np.array([1.1,2.2,3.4]), np.array([0.989189123,0.1,0.6]))
-torch.save(full, "k.pt")
-j = torch.load("k.pt")
-print(j)
+## Get the Spectrogram data
+# get train, valid, test from labelled data
+save_path_spec = save_data(hilbert = False, save_name = "labelled_spectrogram")
+training_spec, validation_spec, testing_spec = get_data(save_path = save_path_spec)
+
 ## Save Features
 
 train_loader, val_loader, test_loader = load_data('/content/gdrive/MyDrive/APS360/week4/', bs)
