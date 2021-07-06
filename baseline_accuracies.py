@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 
 os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
 from networks import CNN
-from preprocessor import autoencoder_hilbert_data, autoencoder_spectrogram_data
+from preprocessor import hilbert_data, spectrogram_data
 
 ## import pretrained models
 alexnet = torchvision.models.alexnet(pretrained=True)
@@ -25,12 +25,92 @@ inception = torchvision.models.inception.inception_v3(pretrained=True)
 vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
 resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
 
+## Functions to save and create labelled datasets
+def save_data(win_len = 2048, hilbert = True, set_percent = 0.1, save_name = None):
+    """
+    sort datasets for the labelled data
+    win_len is the how many samples are taken from a music clip
+    hilbert indiciates whether the data is mapped with hilbert curves or not
+    set_percent indicates the % of test/validation
+    save_name is the name used to save the datasets
+
+    returns the save_path of the saved data
+    """
+    dataset = None
+    labels = None
+    # old_dir is where this file is in: ".../Lingling-Bot/"
+    old_dir = os.getcwd()
+    labelled_dir = old_dir + "/Downloads/Audios/labelled/"
+    save_path = old_dir + "/Data"
+    for file in os.listdir(labelled_dir):
+        # For each .wav file in the downloaded path
+        if file.endswith(".wav"):
+            file = labelled_dir + file
+            # If hilbert is required, save the .wav files as hilbert curve data
+            if hilbert:
+                data, label = hilbert_data(file, win_len = win_len)
+                # Convert data and labels to tensors
+                data, label = torch.Tensor(list(data)), torch.Tensor(list(label))
+                if dataset == None:
+                    dataset = data
+                    labels = label
+                else:
+                    dataset = torch.cat((dataset, data))
+                    labels = torch.cat((labels, label))
+            # Else, save the .wav files as spectrogram data
+            else:
+                data, label = spectrogram_data(file, win_len = win_len)
+                # Convert data and labels to tensors
+                data, label = torch.Tensor(list(data)), torch.Tensor(list(label))
+                if dataset == None:
+                    dataset = data
+                    labels = label
+                else:
+                    dataset = torch.cat((dataset, data))
+                    labels = torch.cat((labels, label))
+    if hilbert:
+        save_path = save_path + "/Hilbert/labelled/" + save_name + '.pt'
+    else:
+        save_path = save_path + "/Spectrogram/labelled/" + save_name + '.pt'
+    full_set = dt.TensorDataset(dataset, labels)
+    torch.save(full_set, save_path)
+    return save_path
+
+def get_data(save_path):
+    '''
+    get the data saves at save_path and return the training, validation, and testing
+    '''
+    load = torch.load(save_path)
+    trainig, validation, testing = dt.random_split(load, [len(dataset) - 2*set_size, set_size, set_size])
+    return training, validation, testing
+
+## Get the labelled datasets
+save_path = save_data(save_name = "labelled")
+training, validation, testing = get_data(save_path)
+
+##
+full = dt.TensorDataset(np.array([1.1,2.2,3.4]), np.array([0.989189123,0.1,0.6]))
+torch.save(full, "k.pt")
+j = torch.load("k.pt")
+print(j)
 ## Save Features
+
+train_loader, val_loader, test_loader = load_data('/content/gdrive/MyDrive/APS360/week4/', bs)
+
+
+
+# cur_path is whichever directory the current file is in: ".../Lingling-Bot/"
 cur_path = os.getcwd()
-data_path = cur_path + "/Images/"
+
+# where to save the features
+hilbert = True
+if hilbert:
+    data_path = cur_path + "/Data/Hilbert/Features/"
+else:
+    data_path = cur_path + "/Data/Spectrogram/Features/"
+
 
 bs = 1
-train_loader, val_loader, test_loader = load_data()
 ##
 # save features to folder as tensors, path as the path to save
 def save_features(loader, path, model):
