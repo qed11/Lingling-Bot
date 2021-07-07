@@ -252,6 +252,30 @@ def load_data(name, bs):
 train_alex, val_alex, test_alex = load_data("alexnet", 1)
 train_vgg, val_vgg, test_vgg = load_data('vgg16', 1)
 
+## Create Simple Model CNN for Alexnet and vgg16
+class SimpleCNN(nn.Module):
+    def __init__(self, kernel_size = [2,2]):
+        super(AlexNew, self).__init__()
+        self.name = "SimpleCNN"
+
+        # 2 convolution layers
+        self.conv1 = nn.Conv2d(256, 49, kernel_size[0])
+        self.conv2 = nn.Conv2d(49, 10, kernel_size[1])
+
+        # Fully connected layers, hidden unit of 32
+        self.fc1 = nn.Linear(10*4*4, 32)
+        self.fc2 = nn.Linear(32, 9) # 9 classifications
+
+    def forward(self, img):
+        x = F.relu(self.conv1(img))
+        x = F.relu(self.conv2(x))
+        x = x.view(-1, 10*4*4)
+
+        # use relu as activation function
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
 ##
 
 
