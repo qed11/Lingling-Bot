@@ -21,7 +21,6 @@ from preprocessor import hilbert_data, spectrogram_data
 
 ## import pretrained models
 alexnet = torchvision.models.alexnet(pretrained=True)
-inception = torchvision.models.inception.inception_v3(pretrained=True)
 vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
 resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
 
@@ -155,24 +154,17 @@ def save_features(loader, size, model, name):
     diff = end-start
     print("Complete creating features, took " + str(diff/60) + " minutes.")
 
-## Save the features
-# alexnet
+## Save alexnet features
 save_features(training_hilb, 224, alexnet, "alexnet_train")
-##
 save_features(validation_hilb, 224, alexnet, "alexnet_val")
 save_features(testing_hilb, 224, alexnet, "alexnet_test")
 
-# inception
-save_features(training_hilb, 299, inception, "incept_train")
-save_features(validation_hilb, 299, inception, "incept_val")
-save_features(testing_hilb, 299, inception, "incept_test")
-
-# vgg16
+## Save vgg16 features
 save_features(training_hilb, 224, vgg16, "vgg16_train")
 save_features(validation_hilb, 224, vgg16, "vgg16_val")
 save_features(testing_hilb, 224, vgg16, "vgg16_test")
 
-# resnet18
+## Save resnet18 features
 save_features(training_hilb, 224, resnet18, "resnet18_train")
 save_features(validation_hilb, 224, resnet18, "resnet18_val")
 save_features(testing_hilb, 224, resnet18, "resnet18_test")
@@ -238,71 +230,13 @@ def balance_training_set(name):
             num_items_new.append(i)
     return folders, num_items, ratios, num_items_new
 
+
+## create new data folder for more balanced dataset
 folders, num_items, ratios, new = balance_training_set("alexnet_train")
-max(num_items)
 ##
-path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet_train/"
-for folder in os.listdir(path):
-    if os.path.isdir(path + folder + "/"):
-        # get all the folders
-        folders.append(folder)
-        i = 0
-        # count the number of items in the folder
-        for item in os.listdir(path + folder + "/"):
-            i += 1
-            print(item[:-7])
-            break
-        # store the number of items in the folder
-        num_items.append(i)
-        break
+folders, num_items, ratios, new = balance_training_set("vgg16_train")
 ##
-for i in [0,10,9]:
-    print('l')
-##
-
-spam = 0
-non_spam = 0
-k = 0
-for line in open('/content/gdrive/MyDrive/APS360/week6/smsspamcollection/SMSSpamCollection'):
-    k += 1
-    if line[0:4] == "spam":
-        spam += 1
-    elif line[0:3] == "ham":
-        non_spam += 1
-print("Number of spam messages: " + str(spam))
-print("Number of non-span messages: " + str(non_spam))
-text_field = torchtext.legacy.data.Field(sequential=True,      # text sequence
-                                  tokenize=lambda x: x, # because are building a character-RNN
-                                  include_lengths=True, # to track the length of sequences, for batching
-                                  batch_first=True,
-                                  use_vocab=True)       # to turn each character into an integer index
-label_field = torchtext.legacy.data.Field(sequential=False,    # not a sequence
-                                   use_vocab=False,     # don't need to track vocabulary
-                                   is_target=True,
-                                   batch_first=True,
-                                   preprocessing=lambda x: int(x == 'spam')) # convert text to 0 and 1
-
-fields = [('label', label_field), ('sms', text_field)]
-dataset = torchtext.legacy.data.TabularDataset("/content/gdrive/MyDrive/APS360/week6/smsspamcollection/SMSSpamCollection", # name of the file
-                                        "tsv",               # fields are separated by a tab
-                                        fields)
-train, valid, test = dataset.split(split_ratio=[0.6,0.2,0.2])
-print("Size of train: " + str(len(train)))
-print("Size of valid: " + str(len(valid)))
-print("Size of test: " + str(len(test)))
-# save the original training examples
-old_train_examples = train.examples
-# get all the spam messages in `train`
-train_spam = []
-for item in train.examples:
-    if item.label == 1:
-        train_spam.append(item)
-# duplicate each spam message 6 more times
-train.examples = old_train_examples + train_spam * 6
-print("Current train size: " + str(len(train.examples)))
-
-
-
+folders, num_items, ratios, new = balance_training_set("resnet18_train")
 
 
 
