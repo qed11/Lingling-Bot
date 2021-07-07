@@ -22,7 +22,6 @@ from preprocessor import hilbert_data, spectrogram_data
 ## import pretrained models
 alexnet = torchvision.models.alexnet(pretrained=True)
 vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
-resnet18 = torchvision.models.resnet.resnet18(pretrained=True)
 
 ##Set all the seeds to ensure reproducability
 random.seed(1000)
@@ -164,11 +163,6 @@ save_features(training_hilb, 224, vgg16, "vgg16_train")
 save_features(validation_hilb, 224, vgg16, "vgg16_val")
 save_features(testing_hilb, 224, vgg16, "vgg16_test")
 
-## Save resnet18 features
-save_features(training_hilb, 224, resnet18, "resnet18_train")
-save_features(validation_hilb, 224, resnet18, "resnet18_val")
-save_features(testing_hilb, 224, resnet18, "resnet18_test")
-
 ## Balacing the training dataset
 import shutil
 
@@ -233,11 +227,32 @@ def balance_training_set(name):
 
 ## create new data folder for more balanced dataset
 folders, num_items, ratios, new = balance_training_set("alexnet_train")
-##
 folders, num_items, ratios, new = balance_training_set("vgg16_train")
-##
-folders, num_items, ratios, new = balance_training_set("resnet18_train")
 
+## Load the data from the balanced datasets
+def load_data(name, bs):
+    '''
+    load the data from the files
+    '''
+    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/'
+    name = path + name
+    # use ~60% of images including A-I for training (number 1-60)
+    # use ~20% of images including A-I for validation (number 61-81)
+    # use ~20% of images including A-I for testing (number 82-102/101)
+    trainset = torchvision.datasets.DatasetFolder(name + '_train_duplicates', loader = torch.load, extensions = ('.tensor'))
+    valset = torchvision.datasets.DatasetFolder(name + '_val', loader = torch.load, extensions = ('.tensor'))
+    testset = torchvision.datasets.DatasetFolder(name + '_test', loader = torch.load, extensions = ('.tensor'))
+
+    # load data in and return
+    trainload = dt.DataLoader(trainset, batch_size = bs, shuffle = True)
+    valload = dt.DataLoader(valset, batch_size = bs, shuffle = True)
+    testload = dt.DataLoader(testset, batch_size = bs, shuffle = True)
+    return trainload, valload, testload
+## load the loaders for alexnet and vgg16
+train_alex, val_alex, test_alex = load_data("alexnet", 1)
+train_vgg, val_vgg, test_vgg = load_data('vgg16', 1)
+
+##
 
 
 ##
