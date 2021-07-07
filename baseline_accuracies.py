@@ -98,24 +98,26 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
 
 ## Store Hilbert Data
 # get train, valid, test from labelled data
-save_path = save_data(hilbert = True, save_name = "labelled_hilbert")
+save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096")
+
 ## Store Spectrogram Data
 # get train, valid, test from labelled data
-save_path_spec = save_data(hilbert = False, save_name = "labelled_spectrogram")
+save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096")
+
 ## Load data for hilbert and spectrogram
-training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert.pt")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
 # training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_spectrogram.pt")
 
-## Save Features
-def save_alex_features(loader):
+## Save Features Function
+def save_features(loader, size, model, name):
     # the label of instruments
     label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
     # the path of where to store the features
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/" + name + "/"
     # define transformations
     transformations = transforms.Compose([
         transforms.ToPILImage(),
-        transforms.CenterCrop(224), # make sure the size is right
+        transforms.CenterCrop(size), # make sure the size is right
         transforms.ToTensor(),
     ])
     # create a pre-trained model folder if not exist
@@ -123,6 +125,8 @@ def save_alex_features(loader):
         os.mkdir(path)
 
     # store the features
+    start = time.time()
+    print("Start making features......")
     i = 0
     for images, label in loader:
         # the following are transformations applied to the image to work with alex net
@@ -130,7 +134,7 @@ def save_alex_features(loader):
         images = torch.stack((images, images, images))
         images = np.transpose(images, [1,0,2,3])
         # get the features
-        features = alexnet.features(images)
+        features = model.features(images)
         features = torch.from_numpy(features.detach().numpy())
         # get the folder names for the features of different instruments
         name = ''
@@ -147,8 +151,160 @@ def save_alex_features(loader):
             os.mkdir(folder)
         torch.save(features.squeeze(0), folder + str(i) + '.tensor')
         i += 1
+    end = time.time()
+    diff = end-start
+    print("Complete creating features, took " + str(diff/60) + " minutes.")
 
-save_alex_features(training_hilb)
+## Save the features
+# alexnet
+save_features(training_hilb, 224, alexnet, "alexnet_train")
+##
+save_features(validation_hilb, 224, alexnet, "alexnet_val")
+save_features(testing_hilb, 224, alexnet, "alexnet_test")
+
+# inception
+save_features(training_hilb, 299, inception, "incept_train")
+save_features(validation_hilb, 299, inception, "incept_val")
+save_features(testing_hilb, 299, inception, "incept_test")
+
+# vgg16
+save_features(training_hilb, 224, vgg16, "vgg16_train")
+save_features(validation_hilb, 224, vgg16, "vgg16_val")
+save_features(testing_hilb, 224, vgg16, "vgg16_test")
+
+# resnet18
+save_features(training_hilb, 224, resnet18, "resnet18_train")
+save_features(validation_hilb, 224, resnet18, "resnet18_val")
+save_features(testing_hilb, 224, resnet18, "resnet18_test")
+
+## Balacing the training dataset
+import shutil
+
+def balance_training_set(name):
+    folders = []
+    num_items = []
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/" + name + "/"
+
+    # iterate through all the folders within the training dataset folder
+    for folder in os.listdir(path):
+        if os.path.isdir(path + folder + "/"):
+            # get all the folders
+            folders.append(folder)
+            i = 0
+            # count the number of items in the folder
+            for item in os.listdir(path + folder + "/"):
+                i += 1
+            # store the number of items in the folder
+            num_items.append(i)
+    # find the max value of items in a folder
+    max_nums = max(num_items)
+    # find out how much you need to increase the amount of items in the other folders
+    ratios = []
+    for i in num_items:
+        ratios.append(round(max_nums/i))
+
+    # make folder for duplicates
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/" + name + "_duplicates/"
+    if not os.path.isdir(new_path):
+        os.mkdir(new_path)
+    # make duplicates
+    k = 0
+    num_items_new = []
+    for folder in os.listdir(path):
+        if os.path.isdir(path + folder + "/"):
+            # iterate through items in the folder
+            for item in os.listdir(path + folder + "/"):
+                name = path + folder + '/' + item
+                # new folder for fuplicates
+                new_name = new_path + folder + "/"
+                if not os.path.isdir(new_name):
+                    os.mkdir(new_name)
+                for j in range(ratios[k]):
+                    shutil.copy(name, new_name + item[:-7]+ "_" + str(j) + ".tensor")
+        else:
+            k -= 1
+        k += 1
+        print(k)
+
+    # get the number of items in the duplicate folders to check
+    num_items_new = []
+    for folder in os.listdir(new_path):
+        if os.path.isdir(new_path + folder + '/'):
+            i = 0
+            # count the number of items in the folder
+            for item in os.listdir(new_path + folder + "/"):
+                i += 1
+            # store the number of items in the folder
+            num_items_new.append(i)
+    return folders, num_items, ratios, num_items_new
+
+folders, num_items, ratios, new = balance_training_set("alexnet_train")
+max(num_items)
+##
+path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet_train/"
+for folder in os.listdir(path):
+    if os.path.isdir(path + folder + "/"):
+        # get all the folders
+        folders.append(folder)
+        i = 0
+        # count the number of items in the folder
+        for item in os.listdir(path + folder + "/"):
+            i += 1
+            print(item[:-7])
+            break
+        # store the number of items in the folder
+        num_items.append(i)
+        break
+##
+for i in [0,10,9]:
+    print('l')
+##
+
+spam = 0
+non_spam = 0
+k = 0
+for line in open('/content/gdrive/MyDrive/APS360/week6/smsspamcollection/SMSSpamCollection'):
+    k += 1
+    if line[0:4] == "spam":
+        spam += 1
+    elif line[0:3] == "ham":
+        non_spam += 1
+print("Number of spam messages: " + str(spam))
+print("Number of non-span messages: " + str(non_spam))
+text_field = torchtext.legacy.data.Field(sequential=True,      # text sequence
+                                  tokenize=lambda x: x, # because are building a character-RNN
+                                  include_lengths=True, # to track the length of sequences, for batching
+                                  batch_first=True,
+                                  use_vocab=True)       # to turn each character into an integer index
+label_field = torchtext.legacy.data.Field(sequential=False,    # not a sequence
+                                   use_vocab=False,     # don't need to track vocabulary
+                                   is_target=True,
+                                   batch_first=True,
+                                   preprocessing=lambda x: int(x == 'spam')) # convert text to 0 and 1
+
+fields = [('label', label_field), ('sms', text_field)]
+dataset = torchtext.legacy.data.TabularDataset("/content/gdrive/MyDrive/APS360/week6/smsspamcollection/SMSSpamCollection", # name of the file
+                                        "tsv",               # fields are separated by a tab
+                                        fields)
+train, valid, test = dataset.split(split_ratio=[0.6,0.2,0.2])
+print("Size of train: " + str(len(train)))
+print("Size of valid: " + str(len(valid)))
+print("Size of test: " + str(len(test)))
+# save the original training examples
+old_train_examples = train.examples
+# get all the spam messages in `train`
+train_spam = []
+for item in train.examples:
+    if item.label == 1:
+        train_spam.append(item)
+# duplicate each spam message 6 more times
+train.examples = old_train_examples + train_spam * 6
+print("Current train size: " + str(len(train.examples)))
+
+
+
+
+
 
 ##
 for i in range(len(label.squeeze())):
@@ -168,7 +324,8 @@ for image, label in training_hilb:
     #plt.show()
     if i > 2:
         break
-print(i)
+
+len(training_hilb)
 
 
 
