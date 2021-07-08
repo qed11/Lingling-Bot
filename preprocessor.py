@@ -82,12 +82,17 @@ def autoencoder_hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len =
   """
   Given a file, returns an array of images made by mapping the intensities of the mel spectrums using hilbert curves at points in time, without instrument labels.
   """
+  
   mel_bank = lb.filters.mel(sr = sample_freq, n_fft = n_fft, n_mels = size*size, fmin = fmin, fmax = fmax)  #Get mel transformation matrix
+  print('Check 1')
   mels = gen_mel(file, sample_freq, n_fft, mel_bank, win_len)                                               #Get the value of the mel bins for each point in time
+  print('Check 2')
   array_length = mels.shape[1]                                                                              #Get length of the mels array
   array = np.expand_dims(plot_mels(mels[:, 0], size), 0)                                                    #Initialize the list of mapped mel spectrums
+  print('Check 3')
   for i in range(1, array_length):
     array = np.append(array, np.expand_dims(plot_mels(mels[:, i], size), 0), axis = 0)                    #Keep adding on mapped mel spectrums
+  print('Check 4')
   return array
 
 def spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048):
