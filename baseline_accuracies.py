@@ -248,6 +248,7 @@ def load_data(name, bs):
     valload = dt.DataLoader(valset, batch_size = bs, shuffle = True)
     testload = dt.DataLoader(testset, batch_size = bs, shuffle = True)
     return trainload, valload, testload
+
 ## load the loaders for alexnet and vgg16
 train_alex, val_alex, test_alex = load_data("alexnet", 1)
 train_vgg, val_vgg, test_vgg = load_data('vgg16', 1)
@@ -255,7 +256,7 @@ train_vgg, val_vgg, test_vgg = load_data('vgg16', 1)
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
     def __init__(self, kernel_size = [2,2]):
-        super(AlexNew, self).__init__()
+        super(SimpleCNN, self).__init__()
         self.name = "SimpleCNN"
 
         # 2 convolution layers
@@ -264,7 +265,7 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layers, hidden unit of 32
         self.fc1 = nn.Linear(10*4*4, 32)
-        self.fc2 = nn.Linear(32, 9) # 9 classifications
+        self.fc2 = nn.Linear(32, 20) # 9 classifications
 
     def forward(self, img):
         x = F.relu(self.conv1(img))
@@ -276,9 +277,121 @@ class SimpleCNN(nn.Module):
         x = self.fc2(x)
         return x
 
-## Training Code
+## Training Code (not working yet)
+def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001):
+    '''
+    train the data
+    transfer_name is "alexnet" or "vgg16"
+    '''
+    # use cross entropy loss for multi classification and adam optimizer
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    # load in data and create accuracy arrays
+    train_loader, val_loader, test_loader = load_data("alexnet", bs)
+    train_loss, train_acc, val_acc, iters = [], [], [], []
+
+    # Training
+    start_time = time.time()
+    i = 0
+    print ("Training Started...")
+    for epoch in range(ne):
+        for features, labels in iter(train_loader):
+            print(labels)
+            # Run on GPU if possible
+            if torch.cuda.is_available():
+                features = features.cuda()
+                labels = labels.cuda()
+            print(features.shape)
+            print(labels.shape)
+            print(labels)
+            #return 'f', 'g', 'l', 'i'
+            output = model(features)           # forward pass
+            loss = criterion(output, labels) # compute loss
+            loss.backward()                  # backward pass
+            optimizer.step()                 # update parameter
+            optimizer.zero_grad()            # clean up
+        iters.append(i)
+        i+=1
+        train_loss.append(float(loss)/bs)           # compute loss
+        train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
+        val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
+        print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(loss)) + ', valid acc: ' + str(val_acc[-1]))
+        model_path = "/content/gdrive/MyDrive/APS360/week4/Features/model_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
+        torch.save(model.state_dict(), model_path)
+    print('Finished Training')
+    end_time = time.time()
+    elapsed = end_time - start_time
+    print("Total time elapsed: " + str(elapsed))
+    print("Final Training Accuracy: {}".format(train_acc[-1]))
+    print("Final Validation Accuracy: {}".format(val_acc[-1]))
+    return iters, train_loss, train_acc, val_acc
 
 
+use_cuda = True
+model = SimpleCNN(kernel_size = [2,2])
+if use_cuda and torch.cuda.is_available():
+    model.cuda()
+iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
+
+##
+def train_CNN(model, train_set, val_set, batch = 16, lr = 0.001, num_epochs = 30):
+
+  train_err = np.zeros(num_epochs)
+  train_loss = np.zeros(num_epochs)
+  val_err = np.zeros(num_epochs)
+  val_loss = np.zeros(num_epochs)
+
+  if torch.cuda.is_available():
+    model.cuda()
+  start = time.time()
+  for epoch in range(num_epochs):
+    total_train_loss = 0.0
+    total_train_err = 0.0
+    total_epoch = 0
+    for i, data in enumerate(train_loader, 0):
+      inputs, labels = data
+      if torch.cuda.is_available():
+        inputs = inputs.cuda()
+        labels = labels.cuda()
+      optimizer.zero_grad()
+      outputs = model(inputs)
+      loss = criterion(outputs, labels)
+      loss.backward()
+      optimizer.step()
+      corr = (outputs > 0.0) != labels
+      total_train_err += int(corr.sum())            #Check to see if this works
+      total_train_loss += loss.item()
+      total_epoch += len(labels)
+    train_err[epoch] = float(total_train_err) / total_epoch
+    train_loss[epoch] = float(total_train_loss) / (i+1)
+    val_err[epoch], val_loss[epoch] = evaluate_CNN(model, val_loader, criterion)
+    print(("Epoch {}: Train err: {}, Train loss: {} |"+
+               "Validation err: {}, Validation loss: {}").format(
+                   epoch + 1,
+                   train_err[epoch],
+                   train_loss[epoch],
+                   val_err[epoch],
+                   val_loss[epoch]))
+    model_path = get_model_name(model.name, batch, lr, epoch)
+    torch.save(model.state_dict(), model_path)
+    present = time.time()
+    elapsed = present - start
+    print("Time elapsed: {:.2f} s".format(elapsed))
+  print('Finished Training')
+  end= time.time()
+  elapsed_time = end - start
+  print("Total time elapsed: {:.2f} seconds".format(elapsed_time))
+  epochs = np.arange(1, num_epochs + 1)
+  np.savetxt("{}_train_err.csv".format(model_path), train_err)
+  np.savetxt("{}_train_loss.csv".format(model_path), train_loss)
+  np.savetxt("{}_val_err.csv".format(model_path), val_err)
+  np.savetxt("{}_val_loss.csv".format(model_path), val_loss)
+
+
+
+
+
+##### CODE BELOW DOESN'T WORK YET
 ##
 for i in range(len(label.squeeze())):
     if int(label.squeeze()[i].item()) == 1:
@@ -300,13 +413,6 @@ for image, label in training_hilb:
 
 len(training_hilb)
 
-
-
-
-
-
-
-##### CODE BELOW DOESN'T WORK YET
 ## Save Features
 
 ##
@@ -338,53 +444,116 @@ torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 
 ## Functions
-def sound2image(path, savepath, win_len = 2048, hilbert = True):
+def evaluate_CNN(net, loader, criterion):
     """
-    path is string to where the sound files are
-    win_len is int for the window size
-    hilbert is booleam whether use hilbert to path image or not
+    Taken from Lab 2
     """
+    total_loss = 0.0
+    total_err = 0.0
+    total_epoch = 0
+    if torch.cuda.is_available():
+        model.cuda()
+    for i, data in enumerate(loader, 0):
+        inputs, labels = data
+        if torch.cuda.is_available():
+          inputs = inputs.cuda()
+          labels = labels.cuda()
+        outputs = net(inputs)
+        loss = criterion(outputs, labels)
+        corr = (outputs > 0.0) != labels            #Check to see if this works
+        total_err += int(corr.sum())
+        total_loss += loss.item()
+        total_epoch += len(labels)
+    err = float(total_err) / total_epoch
+    loss = float(total_loss) / (i + 1)
+    return err, loss
 
-    n = 1
-    for file in os.listdir(path):
-        # For each .wav file in the downloaded path
-        if file.endswith(".wav"):
-            # if want hilbert
-            file = '/Users/sarinaxi/Desktop/Lingling-Bot/Downloads/Audios/' + file
-            if hilbert:
-                start_time = time.time()
-                data = autoencoder_hilbert_data(file, win_len = win_len)
-                end_time = time.time()
-                diff = end_time - start_time
-                print("Hilbert conversion complete: " + str(diff) + " seconds.")
-                for array in data:
-                    #plt.imshow(array)
-                    im = Image.fromarray(array.astype('uint8'), 'RGB')
-                    im.show()
-                    return
-                    plt.imshow(im)
-                    im.save(savepath + str(n) + ".jpeg") #newpath is where to save the image data)
-
-                    n += 1
-                    return
-            # else if don't want hilbert
-            else:
-                data = autoencoder_spectrogram_data(file, win_len = win_len)
-                for array in data:
-                    im = Image.fromarray(array)
-                    im.save(savepath + str(n) + ".png") #newpath to replace)
-                    n += 1
-
-def load_data(newpath, set_percent = 0.1):
+def plot_CNN_training_curve(path):
     """
-    load the data from newpath which contains image folders
-    set_percent is the % of data in validation/testing
+    Taken from Lab 2
     """
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5), (0.5/3))])   #Make sure images are tensors, lie within 0 and 1
-    dataset = torchvision.datasets.ImageFolder(newpath, transform = transform) #newpath to replace)  #Turn the images into a dataset
-    set_size = int(set_percent*len(dataset))
-    #Return datasets in order of training set, validation set, test set
-    return dt.random_split(dataset, [len(dataset) - 2*set_size, set_size, set_size])
+    import matplotlib.pyplot as plt
+    train_err = np.loadtxt("{}_train_err.csv".format(path))
+    val_err = np.loadtxt("{}_val_err.csv".format(path))
+    train_loss = np.loadtxt("{}_train_loss.csv".format(path))
+    val_loss = np.loadtxt("{}_val_loss.csv".format(path))
+    plt.title("Train vs Validation Error")
+    n = len(train_err) # number of epochs
+    plt.plot(range(1,n+1), train_err, label="Train")
+    plt.plot(range(1,n+1), val_err, label="Validation")
+    plt.xlabel("Epoch")
+    plt.ylabel("Error")
+    plt.legend(loc='best')
+    plt.show()
+    plt.title("Train vs Validation Loss")
+    plt.plot(range(1,n+1), train_loss, label="Train")
+    plt.plot(range(1,n+1), val_loss, label="Validation")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend(loc='best')
+    plt.show()
 
-sound2image(path = "/Users/sarinaxi/Desktop/Lingling-Bot/Downloads/Audios/", savepath = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert")
+def train_CNN(model, train_set, val_set, batch = 16, lr = 0.001, num_epochs = 30):
+  train_loader = dt.DataLoader(train_set, batch_size=batch, shuffle=True)
+  val_loader = dt.DataLoader(val_set, batch_size=batch, shuffle=True)
+  criterion = nn.BCEWithLogitsLoss()
+  optimizer = optim.Adam(model.parameters(), lr=lr)
+  train_err = np.zeros(num_epochs)
+  train_loss = np.zeros(num_epochs)
+  val_err = np.zeros(num_epochs)
+  val_loss = np.zeros(num_epochs)
+  if torch.cuda.is_available():
+    model.cuda()
+  start = time.time()
+  for epoch in range(num_epochs):
+    total_train_loss = 0.0
+    total_train_err = 0.0
+    total_epoch = 0
+    for i, data in enumerate(train_loader, 0):
+      inputs, labels = data
+      if torch.cuda.is_available():
+        inputs = inputs.cuda()
+        labels = labels.cuda()
+      optimizer.zero_grad()
+      outputs = model(inputs)
+      loss = criterion(outputs, labels)
+      loss.backward()
+      optimizer.step()
+      corr = (outputs > 0.0) != labels
+      total_train_err += int(corr.sum())            #Check to see if this works
+      total_train_loss += loss.item()
+      total_epoch += len(labels)
+    train_err[epoch] = float(total_train_err) / total_epoch
+    train_loss[epoch] = float(total_train_loss) / (i+1)
+    val_err[epoch], val_loss[epoch] = evaluate_CNN(model, val_loader, criterion)
+    print(("Epoch {}: Train err: {}, Train loss: {} |"+
+               "Validation err: {}, Validation loss: {}").format(
+                   epoch + 1,
+                   train_err[epoch],
+                   train_loss[epoch],
+                   val_err[epoch],
+                   val_loss[epoch]))
+    model_path = get_model_name(model.name, batch, lr, epoch)
+    torch.save(model.state_dict(), model_path)
+    present = time.time()
+    elapsed = present - start
+    print("Time elapsed: {:.2f} s".format(elapsed))
+  print('Finished Training')
+  end= time.time()
+  elapsed_time = end - start
+  print("Total time elapsed: {:.2f} seconds".format(elapsed_time))
+  epochs = np.arange(1, num_epochs + 1)
+  np.savetxt("{}_train_err.csv".format(model_path), train_err)
+  np.savetxt("{}_train_loss.csv".format(model_path), train_loss)
+  np.savetxt("{}_val_err.csv".format(model_path), val_err)
+  np.savetxt("{}_val_loss.csv".format(model_path), val_loss)
+
+def CNN_wrapper(model, directory, win_len = 2048, hilbert = True, set_percent = 0.1, batch = 16, lr = 0.001, num_epochs = 30):
+  train_set, val_set, test_set = get_CNN_data(directory, win_len, hilbert, set_percent)         #Get all datasets
+  train_CNN(model, train_set, val_set, batch, lr, num_epochs)                                   #Train autoencoder
+  path = get_model_name(model.name, batch, lr, num_epochs-1)                                    #Get path for plotting loss curves
+  plot_CNN_training_curve(path)                                                                 #Plot loss curves
+  test_loader = dt.DataLoader(train_set, batch_size=1, shuffle=True)                            #Get data loader for test data
+  criterion = nn.BCEWithLogitsLoss()                                                            #Set criterion for test
+  test_err, test_loss = evaluate_CNN(model, test_loader, criterion)                             #Get test accuracy and loss
 
