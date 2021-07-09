@@ -30,7 +30,7 @@ torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 
 ## Functions to save and create labelled dataset
-def save_data(win_len = 2048, hilbert = True, save_name = None):
+def save_data(win_len = 4096, hilbert = True, save_name = None):
     """
     sort datasets for the labelled data
     win_len is the how many samples are taken from a music clip
@@ -44,7 +44,7 @@ def save_data(win_len = 2048, hilbert = True, save_name = None):
     labels = None
     # old_dir is where this file is in: ".../Lingling-Bot/"
     old_dir = os.getcwd()
-    labelled_dir = old_dir + "/Downloads/Audios/labelled/"
+    labelled_dir = old_dir + "/Downloads/Audios/try/"
     save_path = old_dir + "/Data"
     for file in os.listdir(labelled_dir):
         # For each .wav file in the downloaded path
@@ -78,6 +78,9 @@ def save_data(win_len = 2048, hilbert = True, save_name = None):
     else:
         save_path = save_path + "/Spectrogram/labelled/" + save_name + '.pt'
     full_set = dt.TensorDataset(dataset, labels)
+    print(dataset.shape)
+    print(labels.shape)
+    return
     torch.save(full_set, save_path)
     return save_path
 
@@ -107,6 +110,7 @@ training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sari
 # training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_spectrogram.pt")
 
 ## Save Features Function
+# this function save the features without the labels
 def save_features(loader, size, model, name):
     # the label of instruments
     label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
@@ -153,15 +157,97 @@ def save_features(loader, size, model, name):
     diff = end-start
     print("Complete creating features, took " + str(diff/60) + " minutes.")
 
+# save the custom labels
+def save_features_labels(loader, size, model, name):
+    # the label of instruments
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+    # the path of where to store the features
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/" + name + "/"
+    # define transformations
+    transformations = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.CenterCrop(size), # make sure the size is right
+        transforms.ToTensor(),
+    ])
+    # create a pre-trained model folder if not exist
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+    # store the features
+    start = time.time()
+    print("Start making features......")
+    i = 0
+    for images, label in loader:
+        # the following are transformations applied to the image to work with alex net
+        images = transformations(images)
+        images = torch.stack((images, images, images))
+        images = np.transpose(images, [1,0,2,3])
+        # get the features
+        features = model.features(images)
+        features = torch.from_numpy(features.detach().numpy())
+        # get the folder names for the features of different instruments
+        name = ''
+        for j in range(len(label.squeeze())):
+            if int(label.squeeze()[j].item()) == 1:
+                name = str(name) + str(label_dic[j]) + "_"
+        # if the label is all 0, then skip over the file
+        if name == '':
+            continue
+        folder = path + name + "/"
+        #print(folder)
+
+        # make the folders and save the features
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
+        full = dt.TensorDataset(features, label)
+        torch.save(full, folder + str(i) + '.tensor')
+        i += 1
+
+    end = time.time()
+    diff = end-start
+    print("Complete creating features, took " + str(diff/60) + " minutes.")
 ## Save alexnet features
 save_features(training_hilb, 224, alexnet, "alexnet_train")
 save_features(validation_hilb, 224, alexnet, "alexnet_val")
 save_features(testing_hilb, 224, alexnet, "alexnet_test")
 
+## Save alexnet features with custom labels
+save_features_labels(training_hilb, 224, alexnet, "alexnet_train_labels")
+save_features_labels(validation_hilb, 224, alexnet, "alexnet_val_labels")
+save_features_labels(testing_hilb, 224, alexnet, "alexnet_test_labels")
+
 ## Save vgg16 features
 save_features(training_hilb, 224, vgg16, "vgg16_train")
 save_features(validation_hilb, 224, vgg16, "vgg16_val")
 save_features(testing_hilb, 224, vgg16, "vgg16_test")
+
+## Save vgg16 features with customlabels
+save_features_labels(training_hilb, 224, vgg16, "vgg16_train_labels")
+save_features_labels(validation_hilb, 224, vgg16, "vgg16_val_labels")
+save_features_labels(testing_hilb, 224, vgg16, "vgg16_test_labels")
+
+## get number of features
+folders = []
+num_items = []
+items = 0
+name = 'vgg16_train_labels'
+path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/" + name + "/"
+
+# iterate through all the folders within the training dataset folder
+for folder in os.listdir(path):
+    if os.path.isdir(path + folder + "/"):
+        # get all the folders
+        folders.append(folder)
+        i = 0
+        # count the number of items in the folder
+        for item in os.listdir(path + folder + "/"):
+            i += 1
+        #k = torch.load(path + folder + '/' + item)
+        # store the number of items in the folder
+        num_items.append(i)
+        #print(k.shape)
+        items += num_items[-1]
+
 
 ## Balacing the training dataset
 import shutil
@@ -236,9 +322,7 @@ def load_data(name, bs):
     '''
     path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/'
     name = path + name
-    # use ~60% of images including A-I for training (number 1-60)
-    # use ~20% of images including A-I for validation (number 61-81)
-    # use ~20% of images including A-I for testing (number 82-102/101)
+
     trainset = torchvision.datasets.DatasetFolder(name + '_train_duplicates', loader = torch.load, extensions = ('.tensor'))
     valset = torchvision.datasets.DatasetFolder(name + '_val', loader = torch.load, extensions = ('.tensor'))
     testset = torchvision.datasets.DatasetFolder(name + '_test', loader = torch.load, extensions = ('.tensor'))
@@ -278,13 +362,16 @@ class SimpleCNN(nn.Module):
         return x
 
 ## Training Code (not working yet)
-def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001):
+def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True):
     '''
     train the data
     transfer_name is "alexnet" or "vgg16"
     '''
     # use cross entropy loss for multi classification and adam optimizer
-    criterion = nn.BCEWithLogitsLoss()
+    if custom_lable:
+        criterion = nn.BCEWithLogitsLoss()
+    else:
+        criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # load in data and create accuracy arrays
     train_loader, val_loader, test_loader = load_data("alexnet", bs)
@@ -387,7 +474,8 @@ def train_CNN(model, train_set, val_set, batch = 16, lr = 0.001, num_epochs = 30
   np.savetxt("{}_val_err.csv".format(model_path), val_err)
   np.savetxt("{}_val_loss.csv".format(model_path), val_loss)
 
-
+##
+k = torch.load('/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet_train_duplicates/BSN_/7_0.tensor')
 
 
 
