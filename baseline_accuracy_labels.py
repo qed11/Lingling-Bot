@@ -78,9 +78,6 @@ def save_data(win_len = 4096, hilbert = True, save_name = None):
     else:
         save_path = save_path + "/Spectrogram/labelled/" + save_name + '.pt'
     full_set = dt.TensorDataset(dataset, labels)
-    print(dataset.shape)
-    print(labels.shape)
-    return
     torch.save(full_set, save_path)
     return save_path
 
@@ -152,20 +149,13 @@ def save_features_labels(loader, size, model, name):
         # make the folders and save the features
         if not os.path.isdir(folder):
             os.mkdir(folder)
-        full = dt.TensorDataset(features, label)
-        torch.save(full, folder + str(i) + '.tensor')
+        #full = dt.TensorDataset(features, label)
+        torch.save((features,label), folder + str(i) + '.tensor')
         i += 1
 
     end = time.time()
     diff = end-start
     print("Complete creating features, took " + str(diff/60) + " minutes.")
-##
-load = torch.load(save_path)
-    set_size = int(set_percent*len(load))
-    training, validation, testing = dt.random_split(load, [len(load) - 2*set_size, set_size, set_size])
-    train = dt.DataLoader(training, batch_size = bs, shuffle=True)
-    val = dt.DataLoader(validation, batch_size = bs, shuffle=True)
-    test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
 
 ## Save alexnet features with custom labels
 save_features_labels(training_hilb, 224, alexnet, "alexnet_train_labels")
@@ -265,6 +255,7 @@ def balance_training_set(name):
 ## create new data folder for more balanced dataset
 folders, num_items, ratios, new = balance_training_set("alexnet_train_labels")
 folders, num_items, ratios, new = balance_training_set("vgg16_train_labels")
+
 ## Load the data from the balanced datasets
 def load_data(name, bs, label = False):
     '''
@@ -297,9 +288,10 @@ train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
 
 ##
 
-loader = train_alex_label
-for i in loader:
+loader = dt.DataLoader(train_alex_label, batch_size = 1, shuffle = True)
+for i,j in iter(train_alex_label):
     print(i)
+print(train_alex_label)
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
     def __init__(self, kernel_size = [2,2]):
@@ -325,6 +317,28 @@ class SimpleCNN(nn.Module):
         return x
 
 ## Training Code (not working yet)
+# get the accuracy of the model
+def get_accuracy(model, loader):
+    correct = 0
+    total = 0
+    for feature, label in loader:
+        # run on GPU if possible
+        if torch.cuda.is_available():
+            features = feature[0].cuda()
+            labels = feature[1].cuda()
+        else:
+            features = feature[0].squeeze()
+            labels = feature[1].squeeze()
+        outputs = model(features)
+        # find the max predictive score
+        print(outputs.shape)
+        print(outputs)
+        return
+        pred = outputs.max(1, keepdim=True)[1]
+        correct += pred.eq(labels.view_as(pred)).sum().item()
+        total += features.shape[0]
+    return correct / total
+
 def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True):
     '''
     train the data
@@ -332,7 +346,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     '''
     # use cross entropy loss for multi classification and adam optimizer
     if custom_label:
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.MultiLabelSoftMarginLoss()
     else:
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -345,16 +359,20 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     i = 0
     print ("Training Started...")
     for epoch in range(ne):
-        for features, labels in iter(train_loader):
-            print(labels)
-            return
+        for feature, label in iter(train_loader):
+            #print(label)
+            #return
             # Run on GPU if possible
             if torch.cuda.is_available():
-                features = features.cuda()
-                labels = labels.cuda()
-            print(features.shape)
-            print(labels.shape)
-            print(labels)
+                features = feature[0].cuda()
+                labels = feature[1].cuda()
+            else:
+                features = feature[0].squeeze()
+                labels = feature[1].squeeze()
+            #print(features.shape)
+            #print(labels.shape)
+            #print(labels)
+
             #return 'f', 'g', 'l', 'i'
             output = model(features)           # forward pass
             loss = criterion(output, labels) # compute loss
@@ -367,8 +385,10 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
         train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(loss)) + ', valid acc: ' + str(val_acc[-1]))
-        model_path = "/content/gdrive/MyDrive/APS360/week4/Features/model_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
+        return
         torch.save(model.state_dict(), model_path)
+
     print('Finished Training')
     end_time = time.time()
     elapsed = end_time - start_time
