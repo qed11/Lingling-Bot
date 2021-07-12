@@ -294,7 +294,7 @@ for i,j in iter(train_alex_label):
 print(train_alex_label)
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
-    def __init__(self, kernel_size = [2,2]):
+    def __init__(self, kernel_size = [2,2], input = 256):
         super(SimpleCNN, self).__init__()
         self.name = "SimpleCNN"
 
@@ -422,10 +422,13 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,2])
+model = SimpleCNN(kernel_size = [2,3], input = 512)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
 #iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custom", bs, lr, ne, transfer_name)
+##
+vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
+plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custom", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
