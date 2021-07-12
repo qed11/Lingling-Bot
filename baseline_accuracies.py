@@ -78,9 +78,8 @@ def save_data(win_len = 4096, hilbert = True, save_name = None):
     else:
         save_path = save_path + "/Spectrogram/labelled/" + save_name + '.pt'
     full_set = dt.TensorDataset(dataset, labels)
-    print(dataset.shape)
-    print(labels.shape)
-    return
+    # print(dataset.shape)
+    # print(labels.shape)
     torch.save(full_set, save_path)
     return save_path
 
@@ -156,13 +155,7 @@ def save_features(loader, size, model, name):
     end = time.time()
     diff = end-start
     print("Complete creating features, took " + str(diff/60) + " minutes.")
-##
-load = torch.load(save_path)
-    set_size = int(set_percent*len(load))
-    training, validation, testing = dt.random_split(load, [len(load) - 2*set_size, set_size, set_size])
-    train = dt.DataLoader(training, batch_size = bs, shuffle=True)
-    val = dt.DataLoader(validation, batch_size = bs, shuffle=True)
-    test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
+
 ## Save alexnet features
 save_features(training_hilb, 224, alexnet, "alexnet_train")
 save_features(validation_hilb, 224, alexnet, "alexnet_val")
@@ -194,7 +187,6 @@ for folder in os.listdir(path):
         num_items.append(i)
         #print(k.shape)
         items += num_items[-1]
-
 
 ## Balacing the training dataset
 import shutil
@@ -292,22 +284,14 @@ def load_data(name, bs, label = False):
 train_alex, val_alex, test_alex = load_data("alexnet", 1, False)
 train_vgg, val_vgg, test_vgg = load_data('vgg16', 1, False)
 
-##
-
-loader = train_alex
-for i,j in loader:
-    print(i)
-    print(j)
-    break
-
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
-    def __init__(self, kernel_size = [2,2]):
+    def __init__(self, kernel_size = [3,3], input = 256):
         super(SimpleCNN, self).__init__()
         self.name = "SimpleCNN"
 
         # 2 convolution layers
-        self.conv1 = nn.Conv2d(256, 49, kernel_size[0])
+        self.conv1 = nn.Conv2d(input, 49, kernel_size[0])
         self.conv2 = nn.Conv2d(49, 10, kernel_size[1])
 
         # Fully connected layers, hidden unit of 32
@@ -322,6 +306,7 @@ class SimpleCNN(nn.Module):
         # use relu as activation function
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+        #print(x.shape)
         return x
 
 ## Training Code (not working yet)
@@ -348,7 +333,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     '''
     # use cross entropy loss for multi classification and adam optimizer
     if custom_label:
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.MultiLabelSoftMarginLoss()
     else:
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -375,6 +360,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             #return 'f', 'g', 'l', 'i'
             optimizer.zero_grad()
             outputs = model(features)
+            #print(outputs.shape)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -389,129 +375,61 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
         torch.save(model.state_dict(), model_path)
     print('Finished Training')
     end_time = time.time()
-    elapsed = end_time - start_time
-    print("Total time elapsed: " + str(elapsed))
+    elapsed = (end_time - start_time)/60
+    print("Total time elapsed in minutes: " + str(elapsed))
     print("Final Training Accuracy: {}".format(train_acc[-1]))
     print("Final Validation Accuracy: {}".format(val_acc[-1]))
-    return iters, train_loss, train_acc, val_acc
+    return iters, train_loss, train_acc, val_acc, model.name, bs, lr, ne, transfer_name
+
+def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_name):
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/"
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
+
+    ax1.plot(iters, np.dot(losses, bs), label = 'Train')
+    ax1.set_xlabel('Iterations')
+    ax1.set_ylabel('Loss')
+    ax1.set_title('Loss Training')
+    #plt.setp(ax1.get_xticklabels(), rotation=45);
+
+    ax2.plot(iters, train_acc, label="Train")
+    ax2.plot(iters, val_acc, label="Validation")
+    ax2.set_xlabel('Iterations')
+    ax2.set_ylabel('Accuracy')
+    ax2.set_title('Training Accuracy')
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 
+# set up the model
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,2])
+model = SimpleCNN(kernel_size = [2,3], input = 512)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-#iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-training('alexnet', model, 64, 15, 0.01, False)
-##
-def train_CNN(model, train_set, val_set, batch = 16, lr = 0.001, num_epochs = 30):
 
-  train_err = np.zeros(num_epochs)
-  train_loss = np.zeros(num_epochs)
-  val_err = np.zeros(num_epochs)
-  val_loss = np.zeros(num_epochs)
+## alexnet
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 15, 0.01, False)
+plot_acc_loss(iter, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name)
 
-  if torch.cuda.is_available():
-    model.cuda()
-  start = time.time()
-  for epoch in range(num_epochs):
-    total_train_loss = 0.0
-    total_train_err = 0.0
-    total_epoch = 0
-    for i, data in enumerate(train_loader, 0):
-      inputs, labels = data
-      if torch.cuda.is_available():
-        inputs = inputs.cuda()
-        labels = labels.cuda()
-      optimizer.zero_grad()
-      outputs = model(inputs)
-      loss = criterion(outputs, labels)
-      loss.backward()
-      optimizer.step()
-      corr = (outputs > 0.0) != labels
-      total_train_err += int(corr.sum())            #Check to see if this works
-      total_train_loss += loss.item()
-      total_epoch += len(labels)
-    train_err[epoch] = float(total_train_err) / total_epoch
-    train_loss[epoch] = float(total_train_loss) / (i+1)
-    val_err[epoch], val_loss[epoch] = evaluate_CNN(model, val_loader, criterion)
-    print(("Epoch {}: Train err: {}, Train loss: {} |"+
-               "Validation err: {}, Validation loss: {}").format(
-                   epoch + 1,
-                   train_err[epoch],
-                   train_loss[epoch],
-                   val_err[epoch],
-                   val_loss[epoch]))
-    model_path = get_model_name(model.name, batch, lr, epoch)
-    torch.save(model.state_dict(), model_path)
-    present = time.time()
-    elapsed = present - start
-    print("Time elapsed: {:.2f} s".format(elapsed))
-  print('Finished Training')
-  end= time.time()
-  elapsed_time = end - start
-  print("Total time elapsed: {:.2f} seconds".format(elapsed_time))
-  epochs = np.arange(1, num_epochs + 1)
-  np.savetxt("{}_train_err.csv".format(model_path), train_err)
-  np.savetxt("{}_train_loss.csv".format(model_path), train_loss)
-  np.savetxt("{}_val_err.csv".format(model_path), val_err)
-  np.savetxt("{}_val_loss.csv".format(model_path), val_loss)
+## vgg16 training
+vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 15, 0.01, False)
+plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
 
-##
-k = torch.load('/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/alexnet_train_duplicates/BSN_/7_0.tensor')
+## Sanity check (overfitting to transfer learning model to see if it works)
+
+
+
+
+
+
 
 
 
 ##### CODE BELOW DOESN'T WORK YET
-##
-for i in range(len(label.squeeze())):
-    if int(label.squeeze()[i].item()) == 1:
-        name = str(name) + str(label_dic[i]) + "_"
-##
-i = 0
-for image, label in training_hilb:
-    print(image)
-    print(image.shape)
-    print(label)
-    print(label.shape)
 
-    i+= 1
-    img = np.transpose(image, [1,2,0])
-    plt.imshow(img)
-    #plt.show()
-    if i > 2:
-        break
 
-len(training_hilb)
 
-## Save Features
-
-##
-
-##
-
-## Imports
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-import torch.utils.data as dt
-import torchvision.transforms as transforms
-import time
-import os
-import random
-from PIL import Image
-import librosa as lb
-os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
-from preprocessor import autoencoder_hilbert_data, autoencoder_spectrogram_data
-
-##Set all the seeds to ensure reproducability
-random.seed(1000)
-np.random.seed(1000)
-torch.manual_seed(1000)
-torch.cuda.manual_seed(1000)
 
 ## Functions
 def evaluate_CNN(net, loader, criterion):
