@@ -314,6 +314,10 @@ class SimpleCNN(nn.Module):
         # use relu as activation function
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+        #print(x[0])
+        m = nn.Sigmoid()
+        x = m(x)
+        #print(x[0])
         return x
 
 ## Training Code (not working yet)
@@ -331,12 +335,13 @@ def get_accuracy(model, loader):
             labels = feature[1].squeeze()
         outputs = model(features)
         # find the max predictive score
-        print(outputs.shape)
-        print(outputs)
-        return
-        pred = outputs.max(1, keepdim=True)[1]
-        correct += pred.eq(labels.view_as(pred)).sum().item()
-        total += features.shape[0]
+        # print(outputs.shape)
+        #print(outputs[0])
+        for i in range(len(outputs)):
+            for j in range(len(outputs[i])):
+                if outputs[i][j] == labels[i][j]:
+                    correct += 1
+                total += 1
     return correct / total
 
 def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True):
@@ -386,7 +391,6 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(loss)) + ', valid acc: ' + str(val_acc[-1]))
         model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
-        return
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -395,65 +399,33 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     print("Total time elapsed: " + str(elapsed))
     print("Final Training Accuracy: {}".format(train_acc[-1]))
     print("Final Validation Accuracy: {}".format(val_acc[-1]))
-    return iters, train_loss, train_acc, val_acc
+    return iters, train_loss, train_acc, val_acc, model.name, bs, lr, ne, transfer_name
 
+def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_name):
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/"
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
+
+    ax1.plot(iters, np.dot(losses, bs), label = 'Train')
+    ax1.set_xlabel('Iterations')
+    ax1.set_ylabel('Loss')
+    ax1.set_title('Loss Training')
+    #plt.setp(ax1.get_xticklabels(), rotation=45);
+
+    ax2.plot(iters, train_acc, label="Train")
+    ax2.plot(iters, val_acc, label="Validation")
+    ax2.set_xlabel('Iterations')
+    ax2.set_ylabel('Accuracy')
+    ax2.set_title('Training Accuracy')
+    plt.tight_layout()
+    plt.legend()
+    plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
 model = SimpleCNN(kernel_size = [2,2])
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-#iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-training('alexnet', model, 64, 15, 0.01, True)
 ##
-def train_CNN(model, train_set, val_set, batch = 16, lr = 0.001, num_epochs = 30):
-
-  train_err = np.zeros(num_epochs)
-  train_loss = np.zeros(num_epochs)
-  val_err = np.zeros(num_epochs)
-  val_loss = np.zeros(num_epochs)
-
-  if torch.cuda.is_available():
-    model.cuda()
-  start = time.time()
-  for epoch in range(num_epochs):
-    total_train_loss = 0.0
-    total_train_err = 0.0
-    total_epoch = 0
-    for i, data in enumerate(train_loader, 0):
-      inputs, labels = data
-      if torch.cuda.is_available():
-        inputs = inputs.cuda()
-        labels = labels.cuda()
-      optimizer.zero_grad()
-      outputs = model(inputs)
-      loss = criterion(outputs, labels)
-      loss.backward()
-      optimizer.step()
-      corr = (outputs > 0.0) != labels
-      total_train_err += int(corr.sum())            #Check to see if this works
-      total_train_loss += loss.item()
-      total_epoch += len(labels)
-    train_err[epoch] = float(total_train_err) / total_epoch
-    train_loss[epoch] = float(total_train_loss) / (i+1)
-    val_err[epoch], val_loss[epoch] = evaluate_CNN(model, val_loader, criterion)
-    print(("Epoch {}: Train err: {}, Train loss: {} |"+
-               "Validation err: {}, Validation loss: {}").format(
-                   epoch + 1,
-                   train_err[epoch],
-                   train_loss[epoch],
-                   val_err[epoch],
-                   val_loss[epoch]))
-    model_path = get_model_name(model.name, batch, lr, epoch)
-    torch.save(model.state_dict(), model_path)
-    present = time.time()
-    elapsed = present - start
-    print("Time elapsed: {:.2f} s".format(elapsed))
-  print('Finished Training')
-  end= time.time()
-  elapsed_time = end - start
-  print("Total time elapsed: {:.2f} seconds".format(elapsed_time))
-  epochs = np.arange(1, num_epochs + 1)
-  np.savetxt("{}_train_err.csv".format(model_path), train_err)
-  np.savetxt("{}_train_loss.csv".format(model_path), train_loss)
-  np.savetxt("{}_val_err.csv".format(model_path), val_err)
-  np.savetxt("{}_val_loss.csv".format(model_path), val_loss)
+#iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custom", bs, lr, ne, transfer_name)

@@ -306,6 +306,7 @@ class SimpleCNN(nn.Module):
         # use relu as activation function
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
+
         #print(x.shape)
         return x
 
