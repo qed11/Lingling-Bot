@@ -417,6 +417,22 @@ plot_acc_loss(iter, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_n
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 15, 0.01, False)
 plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
 
+## get test accuracy
+bs = 64
+ne = 100
+lr = 0.001
+transfer_name = "alexnet"
+path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_{0}_bs{1}_lr{2}_epoch{3}".format('SimpleCNN', bs, lr, ne, transfer_name)
+state = torch.load(path)
+use_cuda = True
+model = SimpleCNN(kernel_size = [2,2])
+if use_cuda and torch.cuda.is_available():
+    model.cuda()
+model.load_state_dict(state)
+
+train_loader, val_loader, test_loader = load_data_alex('/content/gdrive/MyDrive/APS360/week4/Features/', bs)
+test_acc = get_accuracy_alex(model, test_loader)
+print("test accuracy:", test_acc)
 ## Sanity check (overfitting to transfer learning model to see if it works)
 
 

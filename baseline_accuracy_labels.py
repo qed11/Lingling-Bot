@@ -432,3 +432,37 @@ plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custom", bs, lr, ne
 ##
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.0005, True)
 plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custom", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
+
+## get test accuracy
+# alexnet
+bs = 64
+ne = 100
+lr = 0.001
+transfer_name = "alexnet"
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
+state = torch.load(model_path)
+use_cuda = True
+model = SimpleCNN(kernel_size = [2,2])
+if use_cuda and torch.cuda.is_available():
+    model.cuda()
+model.load_state_dict(state)
+
+train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
+test_acc = get_accuracy(model, test_loader)
+print("alexnet test accuracy:", test_acc) # 0.7338408949658173
+## vgg16
+bs = 64
+ne = 100
+lr = 0.001
+transfer_name = "vgg16"
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
+state = torch.load(model_path)
+use_cuda = True
+model = SimpleCNN(kernel_size = [2,2])
+if use_cuda and torch.cuda.is_available():
+    model.cuda()
+model.load_state_dict(state)
+
+train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
+test_acc = get_accuracy(model, test_loader)
+print("vgg16 test accuracy:", test_acc) # 0.7972343070229957
