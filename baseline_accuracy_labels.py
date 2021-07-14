@@ -396,7 +396,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     print('Finished Training')
     end_time = time.time()
     elapsed = end_time - start_time
-    print("Total time elapsed: " + str(elapsed))
+    print("Total time elapsed: " + str(elapsed/60) + " minutes.")
     print("Final Training Accuracy: {}".format(train_acc[-1]))
     print("Final Validation Accuracy: {}".format(val_acc[-1]))
     return iters, train_loss, train_acc, val_acc, model.name, bs, lr, ne, transfer_name
@@ -427,8 +427,8 @@ if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
 #iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0005, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custom", bs, lr, ne, transfer_name)
 ##
-vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
+vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.0005, True)
 plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custom", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
