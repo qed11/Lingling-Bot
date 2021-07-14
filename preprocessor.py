@@ -100,8 +100,8 @@ def spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048):
   x, freq = lb.load(file, sample_freq)
   data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_fft = n_fft, win_length = win_len)), ref = np.max)  #Get spectrogram
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
-  num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
-  arrays = np.expand_dims(data[:, 0:size], 0)                                                                                #Initialize the list of spectrograms
+  num_ints = floor(len(data[0])/size)*4 - 3                                                                                 #Get number of data points
+  arrays = np.expand_dims(data[:, 0:size], 0)                                                                               #Initialize the list of spectrograms
   label_array = np.expand_dims(label, 0)                                                                                    #Initialize array of labels
   for i in range(1, num_ints):
     stt_ind = int(i*size/4)
@@ -114,8 +114,8 @@ def autoencoder_spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_l
   x, freq = lb.load(file, sample_freq)
   data = lb.amplitude_to_db(np.abs(lb.feature.melspectrogram(x, freq, n_fft = n_fft, win_length = win_len)), ref = np.max)  #Get spectrogram
   size = len(data)                                                                                                          #Get size of spectrogram (num bins)
-  num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
-  arrays = np.expand_dims(data[:, 0:size], 0)                                                                                #Initialize the list of spectrograms
+  num_ints = floor(len(data[0])/size)*4 - 3                                                                                 #Get number of data points
+  arrays = np.expand_dims(data[:, 0:size], 0)                                                                               #Initialize the list of spectrograms
   for i in range(1, num_ints):
     stt_ind = int(i*size/4)
     fin_ind = int(i*size/4) + size
