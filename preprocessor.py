@@ -119,7 +119,7 @@ def autoencoder_spectrogram_data(file, sample_freq = 22050, n_fft = 65536, win_l
   num_ints = floor(len(data[0])/size)*4                                                                                     #Get number of data points
   arrays = np.expand_dims(data[:, 0:add_on], 0)                                                                                #Initialize the list of spectrograms
   for i in range(1, num_ints):
-    stt_ind = i*size/4
-    fin_ind = i*size/4 + add_on
+    stt_ind = int(i*size/4)
+    fin_ind = int(i*size/4) + add_on
     arrays = np.append(arrays, np.expand_dims(data[:, stt_ind:fin_ind], 0), axis = 0)                                       #Keep adding on spectrograms
   return arrays
