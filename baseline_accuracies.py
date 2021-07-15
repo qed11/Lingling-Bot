@@ -334,7 +334,8 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     '''
     # use cross entropy loss for multi classification and adam optimizer
     if custom_label:
-        criterion = nn.MultiLabelSoftMarginLoss()
+        #criterion = nn.MultiLabelSoftMarginLoss()
+        criterion = nn.BCEWithLogitsLoss()
     else:
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)

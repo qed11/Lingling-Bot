@@ -288,10 +288,11 @@ train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
 
 ##
 
-loader = dt.DataLoader(train_alex_label, batch_size = 1, shuffle = True)
-for i,j in iter(train_alex_label):
-    print(i)
-print(train_alex_label)
+#loader = dt.DataLoader(train_alex_label, batch_size = 1, shuffle = True)
+for i,j in iter(train_vgg_label):
+    print(i[0].shape)
+    break
+#print(train_vgg_label)
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
     def __init__(self, kernel_size = [2,2], input = 256):
@@ -299,7 +300,7 @@ class SimpleCNN(nn.Module):
         self.name = "SimpleCNN"
 
         # 2 convolution layers
-        self.conv1 = nn.Conv2d(256, 49, kernel_size[0])
+        self.conv1 = nn.Conv2d(input, 49, kernel_size[0])
         self.conv2 = nn.Conv2d(49, 10, kernel_size[1])
 
         # Fully connected layers, hidden unit of 32
@@ -351,12 +352,13 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     '''
     # use cross entropy loss for multi classification and adam optimizer
     if custom_label:
-        criterion = nn.MultiLabelSoftMarginLoss()
+        #criterion = nn.MultiLabelSoftMarginLoss()
+        criterion = nn.BCEWithLogitsLoss()
     else:
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # load in data and create accuracy arrays
-    train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
+    train_loader, val_loader, test_loader = load_data(transfer_name, bs, True)
     train_loss, train_acc, val_acc, iters = [], [], [], []
 
     # Training
@@ -364,6 +366,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     i = 0
     print ("Training Started...")
     for epoch in range(ne):
+        lo = 0
         for feature, label in iter(train_loader):
             #print(label)
             #return
@@ -384,9 +387,10 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             loss.backward()                  # backward pass
             optimizer.step()                 # update parameter
             optimizer.zero_grad()            # clean up
+            lo += loss
         iters.append(i)
         i+=1
-        train_loss.append(float(loss)/bs)           # compute loss
+        train_loss.append(float(lo)/bs)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(loss)) + ', valid acc: ' + str(val_acc[-1]))
@@ -427,11 +431,11 @@ if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
 #iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0005, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custom", bs, lr, ne, transfer_name)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 150, 0.001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custombce", bs, lr, ne, transfer_name)
 ##
-vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.0005, True)
-plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custom", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
+vgg_iters, vgg_train_loss, gg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
+plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custombce", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
 
 ## get test accuracy
 # alexnet
