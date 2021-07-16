@@ -352,8 +352,8 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     '''
     # use cross entropy loss for multi classification and adam optimizer
     if custom_label:
-        #criterion = nn.MultiLabelSoftMarginLoss()
-        criterion = nn.BCEWithLogitsLoss()
+        criterion = nn.MultiLabelSoftMarginLoss()
+        #criterion = nn.BCEWithLogitsLoss()
     else:
         criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -367,6 +367,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     print ("Training Started...")
     for epoch in range(ne):
         lo = 0
+        j = 0
         for feature, label in iter(train_loader):
             #print(label)
             #return
@@ -388,12 +389,13 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             optimizer.step()                 # update parameter
             optimizer.zero_grad()            # clean up
             lo += loss
+            j += 1
         iters.append(i)
         i+=1
-        train_loss.append(float(lo)/bs)           # compute loss
+        train_loss.append(float(lo)/bs/j)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
-        print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(loss)) + ', valid acc: ' + str(val_acc[-1]))
+        print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
         torch.save(model.state_dict(), model_path)
 
@@ -426,16 +428,16 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,3], input = 512)
+model = SimpleCNN(kernel_size = [2,2])
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
 #iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 150, 0.001, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "custombce", bs, lr, ne, transfer_name)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 120, 0.001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name)
 ##
-vgg_iters, vgg_train_loss, gg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
-plot_acc_loss(vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name + "custombce", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
+vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
+plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "custombce2", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
 
 ## get test accuracy
 # alexnet
