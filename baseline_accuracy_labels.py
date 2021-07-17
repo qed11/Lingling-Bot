@@ -402,7 +402,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
     print('Finished Training')
     end_time = time.time()
     elapsed = end_time - start_time
-    print("Total time elapsed: " + str(elapsed/60) + " minutes.")
+    print("Total time elapsed: " + str(elapsed/60/60) + " hours.")
     print("Final Training Accuracy: {}".format(train_acc[-1]))
     print("Final Validation Accuracy: {}".format(val_acc[-1]))
     return iters, train_loss, train_acc, val_acc, model.name, bs, lr, ne, transfer_name
@@ -412,9 +412,10 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
-    ax1.plot(iters, np.dot(losses, bs), label = 'Train')
+    ax1.plot(iters, losses, bs, label = 'Train')
     ax1.set_xlabel('Iterations')
     ax1.set_ylabel('Loss')
+    ax1.set_ylim(0.0098, 0.0099)
     ax1.set_title('Loss Training')
     #plt.setp(ax1.get_xticklabels(), rotation=45);
 
@@ -433,7 +434,7 @@ if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
 #iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 120, 0.001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 150, 0.001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name)
 ##
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
@@ -455,7 +456,8 @@ model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("alexnet test accuracy:", test_acc) # 0.7338408949658173
+print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmax1 (64, 100, 0.001)
+
 ## vgg16
 bs = 64
 ne = 100
