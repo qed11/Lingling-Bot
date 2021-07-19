@@ -429,7 +429,7 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,2])
+model = SimpleCNN(kernel_size = [3,2], input = 512)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
@@ -437,13 +437,13 @@ if use_cuda and torch.cuda.is_available():
 iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 150, 0.001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name)
 ##
-vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 100, 0.001, True)
-plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "custombce2", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
+vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 150, 0.001, True)
+plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "customsoftmargin", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name)
 
 ## get test accuracy
 # alexnet
 bs = 64
-ne = 100
+ne = 150
 lr = 0.001
 transfer_name = "alexnet"
 model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
@@ -456,21 +456,23 @@ model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmax1 (64, 100, 0.001)
+print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmargin1 (64, 100, 0.001)
+# 0.808701565568676 (64,150,0.001)
 
 ## vgg16
 bs = 64
-ne = 100
+ne = 150
 lr = 0.001
 transfer_name = "vgg16"
 model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
 state = torch.load(model_path)
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,2])
+model = SimpleCNN(kernel_size = [3,2], input = 512)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 model.load_state_dict(state)
 
-train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
+train_loader, val_loader, test_loader = load_data("vgg16", bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("vgg16 test accuracy:", test_acc) # 0.7972343070229957
+print("vgg16 test accuracy:", test_acc) # 0.7972343070229957 0.74954941721566 softmargin1 (64, 100, 0.001)
+# 0.833095901180858 for (64, 150, 0.001)
