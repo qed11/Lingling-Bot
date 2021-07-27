@@ -40,7 +40,7 @@ class Autoencoder(nn.Module):
         super(Autoencoder, self).__init__()
         self.name = name
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 16, 3, padding = 1), 
+            nn.Conv2d(1, 16, 3, padding = 1),
             nn.Conv2d(16, 32, 3, padding = 1),
             nn.Conv2d(32, 64, 3, padding = 1)
         )
@@ -55,3 +55,4 @@ class Autoencoder(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
+

@@ -356,13 +356,8 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             if torch.cuda.is_available():
                 features = features.cuda()
                 labels = labels.cuda()
-            #print(features.shape)
-            #print(labels.shape)
-            #print(labels)
-            #return 'f', 'g', 'l', 'i'
             optimizer.zero_grad()
             outputs = model(features)
-            #print(outputs.shape)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
