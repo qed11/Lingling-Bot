@@ -108,7 +108,7 @@ save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilb
 save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096")
 
 ## Load data for hilbert and spectrogram
-#training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_spectrogram_4096.pt")
+#training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
 training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
 
 ## Save Features Function
@@ -153,12 +153,10 @@ def save_features_labels(loader, size, model, name, hilbert = True):
         if name == '':
             continue
         folder = path + name + "/"
-        #print(folder)
 
         # make the folders and save the features
         if not os.path.isdir(folder):
             os.mkdir(folder)
-        #full = dt.TensorDataset(features, label)
         torch.save((features,label), folder + str(i) + '.tensor')
         i += 1
 
@@ -202,12 +200,9 @@ for folder in os.listdir(path):
         # count the number of items in the folder
         for item in os.listdir(path + folder + "/"):
             i += 1
-        #k = torch.load(path + folder + '/' + item)
         # store the number of items in the folder
         num_items.append(i)
-        #print(k.shape)
         items += num_items[-1]
-
 
 ## Balacing the training dataset
 import shutil
@@ -260,7 +255,6 @@ def balance_training_set(name, hilbert = True):
         else:
             k -= 1
         k += 1
-        #print(k)
 
     # get the number of items in the duplicate folders to check
     num_items_new = []
@@ -317,13 +311,6 @@ def load_data(name, bs, label = False, hilbert = True):
 train_alex_label, val_alex_label, test_alex_label = load_data("alexnet", 1, True)
 train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
 
-##
-
-#loader = dt.DataLoader(train_alex_label, batch_size = 1, shuffle = True)
-for i,j in iter(train_vgg_label):
-    print(i[0].shape)
-    break
-#print(train_vgg_label)
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
     def __init__(self, kernel_size = [2,2], input = 256):
@@ -415,7 +402,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             j += 1
         iters.append(i)
         i+=1
-        train_loss.append(float(lo)/bs/j)           # compute loss
+        train_loss.append(float(lo)/j)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
@@ -448,7 +435,6 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     ax1.set_ylabel('Loss')
     ax1.set_ylim(min(losses), max(losses))
     ax1.set_title('Loss Training')
-    #plt.setp(ax1.get_xticklabels(), rotation=45);
 
     ax2.plot(iters, train_acc, label="Train")
     ax2.plot(iters, val_acc, label="Validation")
@@ -463,14 +449,13 @@ use_cuda = True
 model = SimpleCNN(kernel_size = [3,2], input = 512)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-##
-#iters, train_loss, train_acc, val_acc = training('alexnet', model, 64, 15, 0.01)
+
+## training alexnet
 iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 600, 0.0001, True, False)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, False)
-##
+## training VGG16
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 600, 0.001, True, False)
 plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "customsoftmargin", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name, False)
-
 ## get test accuracy
 # alexnet
 bs = 64
