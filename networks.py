@@ -41,11 +41,6 @@ class AutoEncoder(nn.Module):
         self.name = name
 
         self.encoder = nn.Sequential(
-<<<<<<< Updated upstream
-            nn.Conv2d(1, 16, 3, padding = 1),
-            nn.Conv2d(16, 32, 3, padding = 1),
-            nn.Conv2d(32, 64, 3, padding = 1)
-=======
             nn.Conv2d(in_channels = 1, out_channels =8, kernel_size = 3, padding = 1, stride = 2),
             nn.ReLU(),
             nn.Conv2d(in_channels = 8, out_channels = 16, kernel_size = 3, padding = 1, stride = 2),
@@ -58,7 +53,6 @@ class AutoEncoder(nn.Module):
             nn.ReLU(),
             nn.Conv2d(in_channels = 128, out_channels = 128, kernel_size = 3, padding = 1, stride = 2),
             nn.ReLU()
->>>>>>> Stashed changes
         )
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(128, 128, 3, padding = 1, stride = 2, output_padding = 1),
@@ -81,7 +75,4 @@ class AutoEncoder(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-<<<<<<< Updated upstream
 
-=======
->>>>>>> Stashed changes
