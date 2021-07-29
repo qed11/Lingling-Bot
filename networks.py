@@ -35,24 +35,53 @@ class CNN(nn.Module):
         x = self.fc3(x)
         return x
 
-class Autoencoder(nn.Module):
+class AutoEncoder(nn.Module):
     def __init__(self, name = 'auto'):
-        super(Autoencoder, self).__init__()
+        super(AutoEncoder, self).__init__()
         self.name = name
+
         self.encoder = nn.Sequential(
+<<<<<<< Updated upstream
             nn.Conv2d(1, 16, 3, padding = 1),
             nn.Conv2d(16, 32, 3, padding = 1),
             nn.Conv2d(32, 64, 3, padding = 1)
+=======
+            nn.Conv2d(in_channels = 1, out_channels =8, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 8, out_channels = 16, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 128, out_channels = 128, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU()
+>>>>>>> Stashed changes
         )
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(64, 32, 3, padding = 1, output_padding=1),
-            nn.ConvTranspose2d(32, 16, 3, padding = 1, output_padding=1),
-            nn.ConvTranspose2d(16, 1, 3, padding = 1, output_padding=1),
-            nn.Sigmoid()
+            nn.ConvTranspose2d(128, 128, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 16, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(16, 8, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(8, 4, 3, padding = 1, stride = 2, output_padding = 1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=4, out_channels=1, kernel_size=1)
         )
+
 
     def forward(self, x):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
+<<<<<<< Updated upstream
 
+=======
+>>>>>>> Stashed changes

@@ -15,7 +15,7 @@ class AutoDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, idx):
         path = self.data[idx] #get the path of the single data
-        image = self.loader(path) #convert that into an image
+        image = self.loader(os.path.join(self.root, path)) #convert that into an image
         if self.transform:
             image = self.transform(image) #if transform, transform
         return image
