@@ -16,7 +16,6 @@ import torch.utils.data as dt
 import torchvision.transforms as transforms
 
 os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
-from networks import CNN
 
 #Set all the seeds to ensure reproducability
 random.seed(1000)
@@ -24,7 +23,148 @@ np.random.seed(1000)
 torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 
-def load_data(name, bs, hilbert = True):
+## get the data
+def get_data(save_path = None, set_percent = 0.1, bs = 1):
+    '''
+    get the data saves at save_path and return the training, validation, and testing
+    '''
+    # load data from the path
+    load = torch.load(save_path)
+    set_size = int(set_percent*len(load))
+    training, validation, testing = dt.random_split(load, [len(load) - 2*set_size, set_size, set_size])
+    train = dt.DataLoader(training, batch_size = bs, shuffle=True)
+    val = dt.DataLoader(validation, batch_size = bs, shuffle=True)
+    test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
+    return train, val, test
+
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
+training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
+
+##
+for i in iter(training_hilb):
+    print(i[0].shape)
+    break
+## properly save labelled data
+def save_with_labels(loader, size, name, hilbert = True):
+    # the label of instruments
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+    # the path of where to store the features
+    if hilbert == True:
+        n = "Hilbert"
+    else:
+        n = "Spectrogram"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "/"
+    # define transformations
+    transformations = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.CenterCrop(size), # make sure the size is right
+        transforms.ToTensor(),
+    ])
+    # create a pre-trained model folder if not exist
+    if not os.path.isdir(path):
+        os.mkdir(path)
+
+    # store the features
+    start = time.time()
+    print("Start making features......")
+    i = 0
+    for images, label in loader:
+        images = transformations(images)
+        images = images.unsqueeze(0)
+
+        # get folder name
+        name = ''
+        for j in range(len(label.squeeze())):
+            if int(label.squeeze()[j].item()) == 1:
+                name = str(name) + str(label_dic[j]) + "_"
+        # if the label is all 0, then skip over the file
+        if name == '':
+            continue
+        folder = path + name + "/"
+
+        # make the folders and labelled data
+        if not os.path.isdir(folder):
+            os.mkdir(folder)
+        torch.save((images,label), folder + str(i) + '.tensor')
+        i += 1
+
+    end = time.time()
+    diff = end-start
+    print("Complete creating folders, took " + str(diff/60) + " minutes.")
+
+save_with_labels(training_hilb, 128,  "train_labels")
+save_with_labels(validation_hilb, 128, "val_labels")
+save_with_labels(testing_hilb, 128,  "test_labels")
+
+
+## Balacing the training dataset
+import shutil
+
+def balance_training_set(name, hilbert = True):
+    folders = []
+    num_items = []
+    if hilbert == True:
+        n = "Hilbert"
+    else:
+        n = "Spectrogram"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "/"
+
+    # iterate through all the folders within the training dataset folder
+    for folder in os.listdir(path):
+        if os.path.isdir(path + folder + "/"):
+            # get all the folders
+            folders.append(folder)
+            i = 0
+            # count the number of items in the folder
+            for item in os.listdir(path + folder + "/"):
+                i += 1
+            # store the number of items in the folder
+            num_items.append(i)
+    # find the max value of items in a folder
+    max_nums = max(num_items)
+    # find out how much you need to increase the amount of items in the other folders
+    ratios = []
+    for i in num_items:
+        ratios.append(round(max_nums/i))
+
+    # make folder for duplicates
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "_duplicates/"
+    if not os.path.isdir(new_path):
+        os.mkdir(new_path)
+    # make duplicates
+    k = 0
+    num_items_new = []
+    for folder in os.listdir(path):
+        if os.path.isdir(path + folder + "/"):
+            # iterate through items in the folder
+            for item in os.listdir(path + folder + "/"):
+                name = path + folder + '/' + item
+                # new folder for fuplicates
+                new_name = new_path + folder + "/"
+                if not os.path.isdir(new_name):
+                    os.mkdir(new_name)
+                for j in range(ratios[k]):
+                    shutil.copy(name, new_name + item[:-7]+ "_" + str(j) + ".tensor")
+        else:
+            k -= 1
+        k += 1
+
+    # get the number of items in the duplicate folders to check
+    num_items_new = []
+    for folder in os.listdir(new_path):
+        if os.path.isdir(new_path + folder + '/'):
+            i = 0
+            # count the number of items in the folder
+            for item in os.listdir(new_path + folder + "/"):
+                i += 1
+            # store the number of items in the folder
+            num_items_new.append(i)
+    return folders, num_items, ratios, num_items_new
+
+folders, num_items, ratios, new = balance_training_set("train_labels")
+
+## load in data
+def load_data(bs, hilbert = True):
     '''
     load the data from the files
     '''
@@ -32,18 +172,15 @@ def load_data(name, bs, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = #'/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/features/'
-    name = path + name
+    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/autoCNN/'
+    name = path
 
     # modify according to how data is stored
-    if label == True:
-        train_name = '_train_labels_duplicates'
-        val_name = '_val_labels'
-        test_name = '_test_labels'
-    else:
-        train_name = '_train_duplicates'
-        val_name = '_val'
-        test_name = '_test'
+
+    train_name = 'train_labels_duplicates'
+    val_name = 'val_labels'
+    test_name = 'test_labels'
+
     trainset = torchvision.datasets.DatasetFolder(name + train_name, loader = torch.load, extensions = ('.tensor'))
     valset = torchvision.datasets.DatasetFolder(name + val_name, loader = torch.load, extensions = ('.tensor'))
     testset = torchvision.datasets.DatasetFolder(name + test_name, loader = torch.load, extensions = ('.tensor'))
@@ -55,6 +192,44 @@ def load_data(name, bs, hilbert = True):
 
     return trainload, valload, testload
 
+## The model
+class CNN2(nn.Module):
+    def __init__(self, name = "CNN2"):
+        super(CNN2, self).__init__()
+        self.name = name
+        self.encoder = nn.Sequential(
+            nn.Conv2d(in_channels = 1, out_channels = 8, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 8, out_channels = 16, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 16, out_channels = 32, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 32, out_channels = 64, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 64, out_channels = 128, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU(),
+            nn.Conv2d(in_channels = 128, out_channels = 128, kernel_size = 3, padding = 1, stride = 2),
+            nn.ReLU()
+        )
+
+        # Fully connected layers, hidden unit of 32
+        self.fc1 = nn.Linear(128*8*8, 32)
+        self.fc2 = nn.Linear(32, 20) # 20 classifications
+
+    def forward(self, img):
+        x = self.encoder(img)
+        x = x.view(-1, 128*8*8)
+
+        # use relu as activation function
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        #print(x[0])
+        m = nn.Sigmoid()
+        x = m(x)
+        #print(x[0])
+        return x
+
+## training
 def get_accuracy(model, loader):
     correct = 0
     total = 0
@@ -75,14 +250,14 @@ def get_accuracy(model, loader):
                 total += 1
     return correct / total
 
-def training(model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
+def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
     train the data
     '''
     criterion = nn.MultiLabelSoftMarginLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # load in data and create accuracy arrays
-    train_loader, val_loader, test_loader = load_data("model",bs, hilbert)
+    train_loader, val_loader, test_loader = load_data(bs, hilbert)
     train_loss, train_acc, val_acc, iters = [], [], [], []
 
     # Training
@@ -93,14 +268,18 @@ def training(model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
         lo = 0
         j = 0
         for feature, label in iter(train_loader):
+
             # Run on GPU if possible
             if torch.cuda.is_available():
-                features = feature[0].squeeze().cuda()
-                labels = feature[1].squeeze().cuda()
+                features = feature[0].squeeze(1).cuda()
+                labels = feature[1].squeeze(1).cuda()
             else:
-                features = feature[0].squeeze()
-                labels = feature[1].squeeze()
+                features = feature[0].squeeze(1)
+                labels = feature[1].squeeze(1)
             output = model(features)           # forward pass
+            #print(output.shape)
+            #print(features.shape)
+            #print(labels.shape)
             loss = criterion(output, labels) # compute loss
             loss.backward()                  # backward pass
             optimizer.step()                 # update parameter
@@ -117,7 +296,7 @@ def training(model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = #"/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -133,7 +312,7 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, hilbert =
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = #"/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/"
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
@@ -153,8 +332,8 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, hilbert =
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = CNN(kernel_size = [3,2], input = 512)
+model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training( model, 64, 600, 0.0001, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 16, 30, 0.001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto", bs, lr, ne, True)
