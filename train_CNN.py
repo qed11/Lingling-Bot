@@ -213,19 +213,20 @@ class CNN2(nn.Module):
         )
 
         # Fully connected layers, hidden unit of 32
-        self.fc1 = nn.Linear(128*8*8, 32)
+        self.fc1 = nn.Linear(128*2*2, 32)
         self.fc2 = nn.Linear(32, 20) # 20 classifications
 
     def forward(self, img):
-        x = self.encoder(img)
-        x = x.view(-1, 128*8*8)
+        imgs = torch.reshape(img, [len(img), 1, 128, 128])
+        x = self.encoder(imgs)
+        x = x.view(-1, 128*2*2)
 
         # use relu as activation function
         x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = F.relu(self.fc2(x))
         #print(x[0])
-        m = nn.Sigmoid()
-        x = m(x)
+        #m = nn.Sigmoid()
+        #x = m(x)
         #print(x[0])
         return x
 
@@ -276,16 +277,15 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
             else:
                 features = feature[0].squeeze(1)
                 labels = feature[1].squeeze(1)
-            output = model(features)           # forward pass
-            #print(output.shape)
-            #print(features.shape)
-            #print(labels.shape)
-            loss = criterion(output, labels) # compute loss
-            loss.backward()                  # backward pass
-            optimizer.step()                 # update parameter
-            optimizer.zero_grad()            # clean up
-            lo += loss
-            j += 1
+            if len(features) == bs:
+                output = model(features)           # forward pass
+
+                loss = criterion(output, labels) # compute loss
+                loss.backward()                  # backward pass
+                optimizer.step()                 # update parameter
+                optimizer.zero_grad()            # clean up
+                lo += loss
+                j += 1
         iters.append(i)
         i+=1
         train_loss.append(float(lo)/bs/j)           # compute loss
@@ -296,7 +296,7 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -329,11 +329,11 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, hilbert =
     ax2.set_title('Training Accuracy')
     plt.tight_layout()
     plt.legend()
-    plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
+    plt.savefig("{4}models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, path))
 
 use_cuda = True
 model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 16, 30, 0.001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 10, 0.0001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto", bs, lr, ne, True)

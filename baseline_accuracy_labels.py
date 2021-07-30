@@ -326,8 +326,10 @@ class SimpleCNN(nn.Module):
         self.fc2 = nn.Linear(32, 20) # 9 classifications
 
     def forward(self, img):
+        print(img.shape)
         x = F.relu(self.conv1(img))
         x = F.relu(self.conv2(x))
+        print(x.shape)
         x = x.view(-1, 10*4*4)
 
         # use relu as activation function
