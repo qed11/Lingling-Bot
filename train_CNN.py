@@ -335,5 +335,5 @@ use_cuda = True
 model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 10, 0.0001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 100, 0.0001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto", bs, lr, ne, True)
