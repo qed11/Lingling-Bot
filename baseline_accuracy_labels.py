@@ -326,8 +326,10 @@ class SimpleCNN(nn.Module):
         self.fc2 = nn.Linear(32, 20) # 9 classifications
 
     def forward(self, img):
+        print(img.shape)
         x = F.relu(self.conv1(img))
         x = F.relu(self.conv2(x))
+        print(x.shape)
         x = x.view(-1, 10*4*4)
 
         # use relu as activation function
@@ -336,7 +338,7 @@ class SimpleCNN(nn.Module):
         #print(x[0])
         m = nn.Sigmoid()
         x = m(x)
-        #print(x[0])
+        print(x.shape)
         return x
 
 ## Training Code (not working yet)
@@ -402,7 +404,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             j += 1
         iters.append(i)
         i+=1
-        train_loss.append(float(lo)/j)           # compute loss
+        train_loss.append(float(lo)/j/bs)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
