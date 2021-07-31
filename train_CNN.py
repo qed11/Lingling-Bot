@@ -234,6 +234,7 @@ class CNN2(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
+    conf_matrix = np.zeros(20, 2, 2)
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -246,10 +247,19 @@ def get_accuracy(model, loader):
         # find the max predictive score
         for i in range(len(outputs)):
             for j in range(len(outputs[i])):
-                if outputs[i][j] == labels[i][j]:
+                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
                     correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    conf_matrix[j, 1, 1] += 1
+                else:
+                    print("uh oh")
                 total += 1
-    return correct / total
+    return correct / total, conf_matrix/total
 
 def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
@@ -289,8 +299,8 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
         iters.append(i)
         i+=1
         train_loss.append(float(lo)/bs/j)           # compute loss
-        train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
-        val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
+        train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
+        val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         if hilbert == True:
             n = "Hilbert"
