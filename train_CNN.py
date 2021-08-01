@@ -236,7 +236,7 @@ class CNN2(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
-    conf_matrix = np.zeros(20, 2, 2)
+    conf_matrix = np.zeros([20, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -356,8 +356,8 @@ use_cuda = True
 model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 100, 0.001, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto3fc100&50", bs, lr, ne, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 10, 0.0001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto32", bs, lr, ne, True)
 ##'
 bs = 64
 ne = 100
