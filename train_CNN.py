@@ -248,19 +248,24 @@ def get_accuracy(model, loader):
         outputs = model(features)
         # find the max predictive score
         for i in range(len(outputs)):
-            if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
-                correct += 1
-                conf_matrix[j, 0, 0] += 1
-            elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
-                conf_matrix[j, 0, 1] += 1
-            elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
-                conf_matrix[j, 1, 0] += 1
-            elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
-                correct += 1
-                conf_matrix[j, 1, 1] += 1
-            else:
-                print("uh oh")
-            total += 1
+            for j in range(len(outputs[i])):
+                if outputs[i][j] > 0.5:
+                    outputs[i][j] = 1
+                else:
+                    outputs[i][j] = 0
+                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
+                    correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    correct += 1
+                    conf_matrix[j, 1, 1] += 1
+                else:
+                    print("uh oh")
+                total += 1
     return correct / total, conf_matrix/total
 
 ##
