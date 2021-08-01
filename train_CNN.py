@@ -47,7 +47,8 @@ for i in iter(training_hilb):
 ## properly save labelled data
 def save_with_labels(loader, size, name, hilbert = True):
     # the label of instruments
-    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
     # the path of where to store the features
     if hilbert == True:
         n = "Hilbert"
@@ -214,7 +215,7 @@ class CNN2(nn.Module):
 
         # Fully connected layers, hidden unit of 32
         self.fc1 = nn.Linear(128*2*2, 32)
-        self.fc2 = nn.Linear(32, 15)
+        self.fc2 = nn.Linear(32, 14) #We have 14 now - Kevin
         #self.fc3 = nn.Linear(50, 20) # 20 classifications
 
     def forward(self, img):
@@ -236,7 +237,7 @@ class CNN2(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
-    conf_matrix = np.zeros([15, 2, 2])
+    conf_matrix = np.zeros([14, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -266,7 +267,7 @@ def get_accuracy(model, loader):
                 else:
                     print("uh oh")
                 total += 1
-    return correct / total, conf_matrix/total * 15
+    return correct / total, conf_matrix/total * 14
 ##
 def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
@@ -373,7 +374,7 @@ train_loader, val_loader, test_loader = load_data(bs, True)
 test_acc = get_accuracy(model, test_loader)
 print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
 print("Confusion Matricies:")
-label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
-for i in range(len(test_acc[1])):
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+for i in range(len(test_acc[0])):
     print(label_dic[i])
     print(test_acc[1][i])
