@@ -99,23 +99,20 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
     test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
     return train, val, test
 
-## Store Hilbert Data
+## Store Hilbert/Spectrogram Data
 # get train, valid, test from labelled data
-save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096_3")
-
-## Store Spectrogram Data
-# get train, valid, test from labelled data
-save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096_2")
+save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096_14")
+#save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096_2")
 
 ## Load data for hilbert and spectrogram
-training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096_3.pt")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096_14.pt")
 #training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
 
 ## Save Features Function
 # save the custom labels
 def save_features_labels(loader, size, model, name, hilbert = True):
     # the label of instruments
-    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
 
     # the path of where to store the features
     if hilbert == True:
@@ -150,6 +147,7 @@ def save_features_labels(loader, size, model, name, hilbert = True):
         for j in range(len(label.squeeze())):
             if int(label.squeeze()[j].item()) == 1:
                 name = str(name) + str(label_dic[j]) + "_"
+
         # if the label is all 0, then skip over the file
         if name == '':
             continue
@@ -327,7 +325,7 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layers, hidden unit of 32
         self.fc1 = nn.Linear(10*4*4, 32)
-        self.fc2 = nn.Linear(32, 15) # 9 classifications
+        self.fc2 = nn.Linear(32, 14) # 14 classifications
 
     def forward(self, img):
         #print(img.shape)
@@ -350,7 +348,7 @@ class SimpleCNN(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
-    conf_matrix = np.zeros([15, 2, 2])
+    conf_matrix = np.zeros([14, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -380,7 +378,7 @@ def get_accuracy(model, loader):
                 else:
                     print("uh oh")
                 total += 1
-    return correct / total, conf_matrix/total * 15
+    return correct / total, conf_matrix/total * 14
 
 def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True, hilbert = True):
     '''
@@ -501,7 +499,7 @@ train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
 test_acc = get_accuracy(model, test_loader)
 print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
 print("Confusion Matricies:")
-label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL',  'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN',  'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
 for i in range(len(test_acc[1])):
     print(label_dic[i])
     print(test_acc[1][i])
