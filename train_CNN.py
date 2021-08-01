@@ -236,6 +236,7 @@ class CNN2(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
+    conf_matrix = np.zeros(20, 2, 2)
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
