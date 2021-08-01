@@ -101,27 +101,28 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
 
 ## Store Hilbert Data
 # get train, valid, test from labelled data
-save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096")
+save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096_3")
 
 ## Store Spectrogram Data
 # get train, valid, test from labelled data
-save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096")
+save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096_2")
 
 ## Load data for hilbert and spectrogram
-#training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
-training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096_3.pt")
+#training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
 
 ## Save Features Function
 # save the custom labels
 def save_features_labels(loader, size, model, name, hilbert = True):
     # the label of instruments
-    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+
     # the path of where to store the features
     if hilbert == True:
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "/"
     # define transformations
     transformations = transforms.Compose([
         transforms.ToPILImage(),
@@ -235,7 +236,7 @@ def balance_training_set(name, hilbert = True):
         ratios.append(round(max_nums/i))
 
     # make folder for duplicates
-    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "_duplicates/"
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "_duplicates/"
     if not os.path.isdir(new_path):
         os.mkdir(new_path)
     # make duplicates
@@ -271,7 +272,7 @@ def balance_training_set(name, hilbert = True):
 
 ## create new data folder for more balanced dataset
 folders, num_items, ratios, new = balance_training_set("alexnet_train_labels")
-folders, num_items, ratios, new = balance_training_set("vgg16_train_labels")
+#folders, num_items, ratios, new = balance_training_set("vgg16_train_labels")
 
 ## create new data folder for more balanced dataset
 folders, num_items, ratios, new = balance_training_set("alexnet_train_labels", hilbert = False)
@@ -326,10 +327,10 @@ class SimpleCNN(nn.Module):
         self.fc2 = nn.Linear(32, 20) # 9 classifications
 
     def forward(self, img):
-        print(img.shape)
+        #print(img.shape)
         x = F.relu(self.conv1(img))
         x = F.relu(self.conv2(x))
-        print(x.shape)
+        #print(x.shape)
         x = x.view(-1, 10*4*4)
 
         # use relu as activation function
@@ -338,7 +339,7 @@ class SimpleCNN(nn.Module):
         #print(x[0])
         m = nn.Sigmoid()
         x = m(x)
-        print(x.shape)
+        #print(x.shape)
         return x
 
 ## Training Code (not working yet)
@@ -346,6 +347,7 @@ class SimpleCNN(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
+    conf_matrix = np.zeros([20, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -358,10 +360,24 @@ def get_accuracy(model, loader):
         # find the max predictive score
         for i in range(len(outputs)):
             for j in range(len(outputs[i])):
-                if outputs[i][j] == labels[i][j]:
+                if outputs[i][j] > 0.5:
+                    outputs[i][j] = 1
+                else:
+                    outputs[i][j] = 0
+                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
                     correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    correct += 1
+                    conf_matrix[j, 1, 1] += 1
+                else:
+                    print("uh oh")
                 total += 1
-    return correct / total
+    return correct / total, conf_matrix/total * 20
 
 def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True, hilbert = True):
     '''
@@ -405,8 +421,8 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
         iters.append(i)
         i+=1
         train_loss.append(float(lo)/j/bs)           # compute loss
-        train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
-        val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
+        train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
+        val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         if hilbert == True:
             n = "Hilbert"
@@ -448,16 +464,53 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = SimpleCNN(kernel_size = [3,2], input = 512)
+model = SimpleCNN(kernel_size = [2,2], input = 256)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 
 ## training alexnet
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 600, 0.0001, True, False)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, False)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0001, True, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, True)
+
 ## training VGG16
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 600, 0.001, True, False)
 plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "customsoftmargin", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name, False)
+
+##
+def get_accuracy2(model, loader):
+    correct = 0
+    total = 0
+    conf_matrix = np.zeros([20, 2, 2])
+    for feature, label in loader:
+        # run on GPU if possible
+        if torch.cuda.is_available():
+            features = feature[0].squeeze().cuda()
+            labels = feature[1].squeeze().cuda()
+        else:
+            features = feature[0].squeeze()
+            labels = feature[1].squeeze()
+        outputs = model(features)
+        # find the max predictive score
+        for i in range(len(outputs)):
+            for j in range(len(outputs[i])):
+                if outputs[i][j] > 0.5:
+                    outputs[i][j] = 1
+                else:
+                    outputs[i][j] = 0
+                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
+                    correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    correct += 1
+                    conf_matrix[j, 1, 1] += 1
+                else:
+                    print("uh oh")
+                total += 1
+    return correct / total, conf_matrix/total * 20
 ## get test accuracy
 # alexnet
 bs = 64
@@ -473,9 +526,18 @@ if use_cuda and torch.cuda.is_available():
 model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
-test_acc = get_accuracy(model, test_loader)
-print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmargin1 (64, 100, 0.001)
+#test_acc = get_accuracy2(model, test_loader)
+#print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmargin1 (64, 100, 0.001)
 # 0.808701565568676 (64,150,0.001)
+
+test_acc = get_accuracy(model, test_loader)
+print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
+print("Confusion Matricies:")
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+for i in range(len(test_acc[1])):
+    print(label_dic[i])
+    print(test_acc[1][i])
+
 
 ## vgg16
 bs = 64

@@ -266,8 +266,7 @@ def get_accuracy(model, loader):
                 else:
                     print("uh oh")
                 total += 1
-    return correct / total, conf_matrix/total
-
+    return correct / total, conf_matrix/total * 20
 ##
 def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
@@ -310,7 +309,6 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
         i+=1
         train_loss.append(float(lo)/bs/j)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
-        break
         val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         if hilbert == True:
@@ -356,13 +354,14 @@ use_cuda = True
 model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 10, 0.0001, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 50, 0.0001, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto32", bs, lr, ne, True)
 ##'
 bs = 64
-ne = 100
+ne = 10
 lr = 0.0001
-model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("CNN2", bs, lr, ne)
+#model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("CNN2", bs, lr, ne)
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN/models/model_customlabel_CNN2_bs64_lr0.0001_epoch10"
 state = torch.load(model_path)
 use_cuda = True
 model = CNN2()
@@ -372,9 +371,9 @@ model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data(bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 100, 0.0001)
+print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
 print("Confusion Matricies:")
 label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
-for i in range(len(test_acc[0])):
+for i in range(len(test_acc[1])):
     print(label_dic[i])
-    print(test_acc[i])
+    print(test_acc[1][i])
