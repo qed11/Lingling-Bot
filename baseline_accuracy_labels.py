@@ -215,7 +215,7 @@ def balance_training_set(name, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "/"
 
     # iterate through all the folders within the training dataset folder
     for folder in os.listdir(path):
@@ -287,7 +287,7 @@ def load_data(name, bs, label = False, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/features/'
+    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/features2/'
     name = path + name
 
     if label == True:
@@ -310,8 +310,11 @@ def load_data(name, bs, label = False, hilbert = True):
 
 ##
 train_alex_label, val_alex_label, test_alex_label = load_data("alexnet", 1, True)
-train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
-
+#train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
+##
+for i, j in train_alex_label:
+    print(len(i[1][0][0]))
+    break
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
     def __init__(self, kernel_size = [2,2], input = 256):
@@ -324,7 +327,7 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layers, hidden unit of 32
         self.fc1 = nn.Linear(10*4*4, 32)
-        self.fc2 = nn.Linear(32, 20) # 9 classifications
+        self.fc2 = nn.Linear(32, 15) # 9 classifications
 
     def forward(self, img):
         #print(img.shape)
@@ -347,7 +350,7 @@ class SimpleCNN(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
-    conf_matrix = np.zeros([20, 2, 2])
+    conf_matrix = np.zeros([15, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -377,7 +380,7 @@ def get_accuracy(model, loader):
                 else:
                     print("uh oh")
                 total += 1
-    return correct / total, conf_matrix/total * 20
+    return correct / total, conf_matrix/total * 15
 
 def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True, hilbert = True):
     '''
@@ -428,7 +431,7 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features2/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -444,7 +447,7 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features2/"
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
@@ -469,55 +472,20 @@ if use_cuda and torch.cuda.is_available():
     model.cuda()
 
 ## training alexnet
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 100, 0.0001, True, True)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 10, 0.0001, True, True)
 plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, True)
 
 ## training VGG16
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 600, 0.001, True, False)
 plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "customsoftmargin", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name, False)
 
-##
-def get_accuracy2(model, loader):
-    correct = 0
-    total = 0
-    conf_matrix = np.zeros([20, 2, 2])
-    for feature, label in loader:
-        # run on GPU if possible
-        if torch.cuda.is_available():
-            features = feature[0].squeeze().cuda()
-            labels = feature[1].squeeze().cuda()
-        else:
-            features = feature[0].squeeze()
-            labels = feature[1].squeeze()
-        outputs = model(features)
-        # find the max predictive score
-        for i in range(len(outputs)):
-            for j in range(len(outputs[i])):
-                if outputs[i][j] > 0.5:
-                    outputs[i][j] = 1
-                else:
-                    outputs[i][j] = 0
-                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
-                    correct += 1
-                    conf_matrix[j, 0, 0] += 1
-                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
-                    conf_matrix[j, 0, 1] += 1
-                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
-                    conf_matrix[j, 1, 0] += 1
-                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
-                    correct += 1
-                    conf_matrix[j, 1, 1] += 1
-                else:
-                    print("uh oh")
-                total += 1
-    return correct / total, conf_matrix/total * 20
 ## get test accuracy
 # alexnet
 bs = 64
-ne = 150
-lr = 0.001
+ne = 100
+lr = 0.0001
 transfer_name = "alexnet"
-model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features2/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
 state = torch.load(model_path)
 use_cuda = True
 model = SimpleCNN(kernel_size = [2,2])
@@ -533,11 +501,10 @@ train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
 test_acc = get_accuracy(model, test_loader)
 print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
 print("Confusion Matricies:")
-label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'BCL',  'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
 for i in range(len(test_acc[1])):
     print(label_dic[i])
     print(test_acc[1][i])
-
 
 ## vgg16
 bs = 64
