@@ -247,18 +247,21 @@ def get_accuracy(model, loader):
         outputs = model(features)
         # find the max predictive score
         for i in range(len(outputs)):
-            for j in range(len(outputs[i])):
-                if outputs[i][j] > 0.5:
-                    outputs[i][j] = 1
-                else:
-                    outputs[i][j] = 0
-                if outputs[i][j] == labels[i][j]:
-                    print(outputs[i][j])
+             if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
                     correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    correct += 1
+                    conf_matrix[j, 1, 1] += 1
                 else:
-                    print(outputs[i][j])
+                    print("uh oh")
                 total += 1
-    return correct / total
+    return correct / total, conf_matrix/total
+
 ##
 def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
@@ -300,9 +303,9 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
         iters.append(i)
         i+=1
         train_loss.append(float(lo)/bs/j)           # compute loss
-        train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
+        train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
         break
-        val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
+        val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         if hilbert == True:
             n = "Hilbert"
@@ -363,4 +366,9 @@ model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data(bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("test accuracy:", test_acc) # 0.7158172778123058 for (64, 100, 0.0001)
+print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 100, 0.0001)
+print("Confusion Matricies:")
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+for i in range(len(test_acc[0])):
+    print(label_dic[i])
+    print(test_acc[i])
