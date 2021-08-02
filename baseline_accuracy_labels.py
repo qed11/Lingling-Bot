@@ -19,7 +19,6 @@ os.chdir("/Users/sarinaxi/Desktop/Lingling-Bot")
 from networks import CNN
 from preprocessor import hilbert_data, spectrogram_data
 
-
 # import pretrained models
 alexnet = torchvision.models.alexnet(pretrained=True)
 vgg16 = torchvision.models.vgg.vgg16(pretrained=True)
@@ -45,7 +44,7 @@ def save_data(win_len = 4096, hilbert = True, save_name = None):
     labels = None
     # old_dir is where this file is in: ".../Lingling-Bot/"
     old_dir = os.getcwd()
-    labelled_dir = old_dir + "/Downloads/Audios/labelled/"
+    labelled_dir = old_dir + "/Downloads/Audios/labelled2/"
     save_path = old_dir + "/Data"
     for file in os.listdir(labelled_dir):
         # For each .wav file in the downloaded path
@@ -99,29 +98,28 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
     test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
     return train, val, test
 
-## Store Hilbert Data
-# get train, valid, test from labelled data
-save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_4096")
+## Store  and loadHilbert/Spectrogram Data
+save_path = save_data(win_len = 4096, hilbert = True, save_name = "labelled_hilbert_new")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_new.pt")
 
-## Store Spectrogram Data
-# get train, valid, test from labelled data
-save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096")
-
-## Load data for hilbert and spectrogram
-#training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
+# not using spectrogram
+'''
+save_path_spec = save_data(win_len = 4096, hilbert = False, save_name = "labelled_spectrogram_4096_2")
 training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
+'''
 
 ## Save Features Function
 # save the custom labels
 def save_features_labels(loader, size, model, name, hilbert = True):
     # the label of instruments
-    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'HRP', 'PCO', 'FLT', 'CLT', 'OBO', 'EHN', 'BSN', 'BCL', 'CTB', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'HSD', 'PER']
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+
     # the path of where to store the features
     if hilbert == True:
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "/"
     # define transformations
     transformations = transforms.Compose([
         transforms.ToPILImage(),
@@ -149,6 +147,7 @@ def save_features_labels(loader, size, model, name, hilbert = True):
         for j in range(len(label.squeeze())):
             if int(label.squeeze()[j].item()) == 1:
                 name = str(name) + str(label_dic[j]) + "_"
+
         # if the label is all 0, then skip over the file
         if name == '':
             continue
@@ -164,25 +163,15 @@ def save_features_labels(loader, size, model, name, hilbert = True):
     diff = end-start
     print("Complete creating features, took " + str(diff/60) + " minutes.")
 
-## Save alexnet features with custom labels
-save_features_labels(training_hilb, 224, alexnet, "alexnet_train_labels")
-save_features_labels(validation_hilb, 224, alexnet, "alexnet_val_labels")
-save_features_labels(testing_hilb, 224, alexnet, "alexnet_test_labels")
+## Save alexnet features for hilbert mapped
+save_features_labels(training_hilb, 224, alexnet, "alexnet_train_labels", hilbert = True)
+save_features_labels(validation_hilb, 224, alexnet, "alexnet_val_labels", hilbert = True)
+save_features_labels(testing_hilb, 224, alexnet, "alexnet_test_labels", hilbert = True)
 
-## Save vgg16 features with customlabels
-save_features_labels(training_hilb, 224, vgg16, "vgg16_train_labels")
-save_features_labels(validation_hilb, 224, vgg16, "vgg16_val_labels")
-save_features_labels(testing_hilb, 224, vgg16, "vgg16_test_labels")
-
-## Save alexnet features with custom labels
-save_features_labels(training_spec, 224, alexnet, "alexnet_train_labels", hilbert = False)
-save_features_labels(validation_spec, 224, alexnet, "alexnet_val_labels", hilbert = False)
-save_features_labels(testing_spec, 224, alexnet, "alexnet_test_labels", hilbert = False)
-
-## Save vgg16 features with customlabels
-save_features_labels(training_spec, 224, vgg16, "vgg16_train_labels", hilbert = False)
-save_features_labels(validation_spec, 224, vgg16, "vgg16_val_labels", hilbert = False)
-save_features_labels(testing_spec, 224, vgg16, "vgg16_test_labels", hilbert = False)
+## Save vgg16 features for hilbert mapped
+save_features_labels(training_hilb, 224, vgg16, "vgg16_train_labels", hilbert = True)
+save_features_labels(validation_hilb, 224, vgg16, "vgg16_val_labels", hilbert = True)
+save_features_labels(testing_hilb, 224, vgg16, "vgg16_test_labels", hilbert = True)
 
 ## get number of features
 folders = []
@@ -214,7 +203,7 @@ def balance_training_set(name, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "/"
 
     # iterate through all the folders within the training dataset folder
     for folder in os.listdir(path):
@@ -235,7 +224,7 @@ def balance_training_set(name, hilbert = True):
         ratios.append(round(max_nums/i))
 
     # make folder for duplicates
-    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features/" + name + "_duplicates/"
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/features2/" + name + "_duplicates/"
     if not os.path.isdir(new_path):
         os.mkdir(new_path)
     # make duplicates
@@ -270,12 +259,8 @@ def balance_training_set(name, hilbert = True):
 
 
 ## create new data folder for more balanced dataset
-folders, num_items, ratios, new = balance_training_set("alexnet_train_labels")
-folders, num_items, ratios, new = balance_training_set("vgg16_train_labels")
-
-## create new data folder for more balanced dataset
-folders, num_items, ratios, new = balance_training_set("alexnet_train_labels", hilbert = False)
-folders, num_items, ratios, new = balance_training_set("vgg16_train_labels", hilbert = False)
+folders, num_items, ratios, new = balance_training_set("alexnet_train_labels", hilbert = True )
+#folders, num_items, ratios, new = balance_training_set("vgg16_train_labels", hilbert = True)
 
 ## Load the data from the balanced datasets
 def load_data(name, bs, label = False, hilbert = True):
@@ -286,7 +271,7 @@ def load_data(name, bs, label = False, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/features/'
+    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/features2/'
     name = path + name
 
     if label == True:
@@ -307,9 +292,12 @@ def load_data(name, bs, label = False, hilbert = True):
     testload = dt.DataLoader(testset, batch_size = bs, shuffle = True)
     return trainload, valload, testload
 
-##
-train_alex_label, val_alex_label, test_alex_label = load_data("alexnet", 1, True)
-train_vgg_label, val_vgg_label, test_vgg_label = load_data('vgg16', 1, True)
+
+# train_alex_label, val_alex_label, test_alex_label = load_data("alexnet", 1, True)
+# for i, j in train_alex_label:
+#     print(len(i[1][0][0]))
+#     break
+
 
 ## Create Simple Model CNN for Alexnet and vgg16
 class SimpleCNN(nn.Module):
@@ -323,22 +311,22 @@ class SimpleCNN(nn.Module):
 
         # Fully connected layers, hidden unit of 32
         self.fc1 = nn.Linear(10*4*4, 32)
-        self.fc2 = nn.Linear(32, 20) # 9 classifications
+        self.fc2 = nn.Linear(32, 14) # 14 classifications
 
     def forward(self, img):
-        print(img.shape)
+        #print(img.shape)
         x = F.relu(self.conv1(img))
         x = F.relu(self.conv2(x))
-        print(x.shape)
+        #print(x.shape)
         x = x.view(-1, 10*4*4)
 
         # use relu as activation function
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         #print(x[0])
-        m = nn.Sigmoid()
-        x = m(x)
-        print(x.shape)
+        #m = nn.Sigmoid()
+        #x = m(x)
+        #print(x)
         return x
 
 ## Training Code (not working yet)
@@ -346,6 +334,7 @@ class SimpleCNN(nn.Module):
 def get_accuracy(model, loader):
     correct = 0
     total = 0
+    conf_matrix = np.zeros([14, 2, 2])
     for feature, label in loader:
         # run on GPU if possible
         if torch.cuda.is_available():
@@ -358,22 +347,33 @@ def get_accuracy(model, loader):
         # find the max predictive score
         for i in range(len(outputs)):
             for j in range(len(outputs[i])):
-                if outputs[i][j] == labels[i][j]:
+                if outputs[i][j] > 0.5:
+                    outputs[i][j] = 1
+                else:
+                    outputs[i][j] = 0
+                if (outputs[i][j] == 1) and (labels[i][j] == 1): #True Positive
                     correct += 1
+                    conf_matrix[j, 0, 0] += 1
+                elif (outputs[i][j] == 1) and (labels[i][j] == 0): #False Positive
+                    conf_matrix[j, 0, 1] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 1): #False Negative
+                    conf_matrix[j, 1, 0] += 1
+                elif (outputs[i][j] == 0) and (labels[i][j] == 0): #True Negative
+                    correct += 1
+                    conf_matrix[j, 1, 1] += 1
+                else:
+                    print("uh oh")
                 total += 1
-    return correct / total
+    return correct / total, conf_matrix/total * 14
 
-def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, custom_label = True, hilbert = True):
+def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
     train the data
     transfer_name is "alexnet" or "vgg16"
     '''
     # use cross entropy loss for multi classification and adam optimizer
-    if custom_label:
-        criterion = nn.MultiLabelSoftMarginLoss()
-        #criterion = nn.BCEWithLogitsLoss()
-    else:
-        criterion = nn.CrossEntropyLoss()
+
+    criterion = nn.MultiLabelSoftMarginLoss()
 
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # load in data and create accuracy arrays
@@ -405,14 +405,14 @@ def training(transfer_name = "alexnet", model = SimpleCNN(), bs = 27, ne = 1, lr
         iters.append(i)
         i+=1
         train_loss.append(float(lo)/j/bs)           # compute loss
-        train_acc.append(get_accuracy(model, train_loader)) # compute train_acc
-        val_acc.append(get_accuracy(model, val_loader))   # compute val_acc
+        train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
+        val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
         print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
         if hilbert == True:
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features2/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne, transfer_name)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -428,7 +428,7 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/features2/"
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
@@ -448,49 +448,43 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, transfer_
     plt.savefig("{5}{4}_models/{0}_bs{1}_lr{2}_epoch{3}.png".format(name, bs, lr, ne, transfer_name, path))
 
 use_cuda = True
-model = SimpleCNN(kernel_size = [3,2], input = 512)
+model = SimpleCNN(kernel_size = [2,2], input = 256)
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 
 ## training alexnet
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 600, 0.0001, True, False)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, False)
+iters, train_loss, train_acc, val_acc, name, bs, lr, ne, transfer_name = training('alexnet', model, 64, 10, 0.0001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "customsoftmargin", bs, lr, ne, transfer_name, True)
+
 ## training VGG16
 vgg_iters, vgg_train_loss, vgg_train_acc, vgg_val_acc, vgg_name, vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name = training('vgg16', model, 64, 600, 0.001, True, False)
 plot_acc_loss(vgg_iters, vgg_train_loss,vgg_train_acc, vgg_val_acc, vgg_name + "customsoftmargin", vgg_bs, vgg_lr, vgg_ne, vgg_transfer_name, False)
+
 ## get test accuracy
-# alexnet
+# variables
 bs = 64
-ne = 150
-lr = 0.001
+ne = 10
+lr = 0.0001
 transfer_name = "alexnet"
-model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
+
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features2/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
 state = torch.load(model_path)
 use_cuda = True
-model = SimpleCNN(kernel_size = [2,2])
+model = SimpleCNN(kernel_size = [2,2]) # [3, 2], input = 512
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 model.load_state_dict(state)
 
-train_loader, val_loader, test_loader = load_data("alexnet", bs, True)
-test_acc = get_accuracy(model, test_loader)
-print("alexnet test accuracy:", test_acc) # 0.7338408949658173 for softmargin1 (64, 100, 0.001)
+train_loader, val_loader, test_loader = load_data(transfer_name, bs, True)
+
+# 0.7338408949658173 for softmargin1 (64, 100, 0.001)
 # 0.808701565568676 (64,150,0.001)
+# 0.7158172778123058 for (64, 10, 0.001)
 
-## vgg16
-bs = 64
-ne = 150
-lr = 0.001
-transfer_name = "vgg16"
-model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/features/{4}_models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("SimpleCNN", bs, lr, ne, transfer_name)
-state = torch.load(model_path)
-use_cuda = True
-model = SimpleCNN(kernel_size = [3,2], input = 512)
-if use_cuda and torch.cuda.is_available():
-    model.cuda()
-model.load_state_dict(state)
-
-train_loader, val_loader, test_loader = load_data("vgg16", bs, True)
 test_acc = get_accuracy(model, test_loader)
-print("vgg16 test accuracy:", test_acc) # 0.7972343070229957 0.74954941721566 softmargin1 (64, 100, 0.001)
-# 0.833095901180858 for (64, 150, 0.001)
+print("test accuracy:", test_acc[0])
+print("Confusion Matricies:")
+label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN',  'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+for i in range(len(test_acc[1])):
+    print(label_dic[i])
+    print(test_acc[1][i])
