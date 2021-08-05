@@ -37,13 +37,8 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
     test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
     return train, val, test
 
-training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_4096.pt")
-training_spec, validation_spec, testing_spec = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Spectrogram/labelled/labelled_spectrogram_4096.pt")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_new.pt")
 
-##
-for i in iter(training_hilb):
-    print(i[0].shape)
-    break
 ## properly save labelled data
 def save_with_labels(loader, size, name, hilbert = True):
     # the label of instruments
@@ -53,7 +48,7 @@ def save_with_labels(loader, size, name, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/example/" + name + "/"
     # define transformations
     transformations = transforms.Compose([
         transforms.ToPILImage(),
@@ -96,7 +91,6 @@ save_with_labels(training_hilb, 128,  "train_labels")
 save_with_labels(validation_hilb, 128, "val_labels")
 save_with_labels(testing_hilb, 128,  "test_labels")
 
-
 ## Balacing the training dataset
 import shutil
 
@@ -107,7 +101,7 @@ def balance_training_set(name, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN2/" + name + "/"
 
     # iterate through all the folders within the training dataset folder
     for folder in os.listdir(path):
@@ -128,7 +122,7 @@ def balance_training_set(name, hilbert = True):
         ratios.append(round(max_nums/i))
 
     # make folder for duplicates
-    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN/" + name + "_duplicates/"
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN2/" + name + "_duplicates/"
     if not os.path.isdir(new_path):
         os.mkdir(new_path)
     # make duplicates
@@ -161,7 +155,85 @@ def balance_training_set(name, hilbert = True):
             num_items_new.append(i)
     return folders, num_items, ratios, num_items_new
 
-folders, num_items, ratios, new = balance_training_set("train_labels")
+folders, num_items, ratios, new = balance_training_set("test_labels")
+
+##
+import shutil
+
+def balance(name, hilbert = True):
+    folders = []
+    num_items = []
+    if hilbert == True:
+        n = "Hilbert"
+    else:
+        n = "Spectrogram"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN2/" + name + "/"
+    label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+
+    # iterate through all the folders within the training dataset folder
+    for folder in os.listdir(path):
+        if os.path.isdir(path + folder + "/"):
+            for i in label_dic:
+                if i in folder:
+                    if  not os.path.isdir("/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/CNN/"+ name + "/"+i + "/"):
+                        os.mkdir("/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/CNN/"+ name + "/"+i + "/")
+                    for j in os.listdir(path + folder + "/"):
+                        new_name = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/CNN/"+ name + "/"+i + "/" + j
+                        shutil.copy(path + folder + "/" + j, new_name)
+
+def balance2(name, hilbert=True):
+    ratio = []
+    fold = []
+    items = []
+    path2 = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/CNN/" + name + "/"
+    # iterate through all the folders within the training dataset folder
+    for folder in os.listdir(path2):
+        if os.path.isdir(path2 + folder + "/"):
+            # get all the folders
+            fold.append(folder)
+            i = 0
+            # count the number of items in the folder
+            for item in os.listdir(path2 + folder + "/"):
+                i += 1
+            # store the number of items in the folder
+
+            items.append(i)
+    # find the max value of items in a folder
+    max_nums = max(items)
+    # find out how much you need to increase the amount of items in the other folders
+    for i in items:
+        ratio.append(round(max_nums/i))
+
+    # make folder for duplicates
+    new_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/CNN/" + name + "_duplicates/"
+    if not os.path.isdir(new_path):
+        os.mkdir(new_path)
+    # make duplicates
+    k = 0
+    for folder in os.listdir(path2):
+        if os.path.isdir(path2 + folder + "/"):
+            # iterate through items in the folder
+            for item in os.listdir(path2 + folder + "/"):
+                name = path2 + folder + '/' + item
+                # new folder for fuplicates
+                new_name = new_path + folder + "/"
+                if not os.path.isdir(new_name):
+                    os.mkdir(new_name)
+                #print(name)
+                #print(new_name)
+                for j in range(ratio[k]):
+                    shutil.copy(name, new_name + item[:-7]+ "_" + str(j) + ".tensor")
+        else:
+            k -= 1
+        k += 1
+
+    return fold, items, ratio
+
+#fold, num_items, ratio, new = balance2("test_labels")
+balance("train_labels")
+fold, num_items, ratio= balance2("train_labels")
+balance("val_labels")
+fold, num_items, ratio= balance2("val_labels")
 
 ## load in data
 def load_data(bs, hilbert = True):
@@ -172,14 +244,14 @@ def load_data(bs, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/autoCNN/'
+    path = '/Users/sarinaxi/Desktop/Lingling-Bot/Data/'+ n +'/CNN/'
     name = path
 
     # modify according to how data is stored
 
-    train_name = 'train_labels_duplicates'
-    val_name = 'val_labels'
-    test_name = 'test_labels'
+    train_name = 'train_labels_duplicates/'
+    val_name = 'val_labels_duplicates/'
+    test_name = 'test_labels_duplicates/'
 
     trainset = torchvision.datasets.DatasetFolder(name + train_name, loader = torch.load, extensions = ('.tensor'))
     valset = torchvision.datasets.DatasetFolder(name + val_name, loader = torch.load, extensions = ('.tensor'))
@@ -213,7 +285,8 @@ class CNN2(nn.Module):
         )
 
         # Fully connected layers, hidden unit of 32
-        self.fc1 = nn.Linear(128*2*2, 32)
+        self.fc1 = nn.Linear(128*2*2,32)
+        #self.fc2 = nn.Linear(50, 32)
         self.fc2 = nn.Linear(32, 14)
         #self.fc3 = nn.Linear(50, 20) # 20 classifications
 
@@ -224,6 +297,7 @@ class CNN2(nn.Module):
 
         # use relu as activation function
         x = F.relu(self.fc1(x))
+        #x = F.relu(self.fc2(x))
         x = F.relu(self.fc2(x))
         #x = F.relu(self.fc3(x))
         #print(x[0])
@@ -267,7 +341,27 @@ def get_accuracy(model, loader):
                     print("uh oh")
                 total += 1
     return correct / total, conf_matrix/total * 14
-##
+
+def get_loss(model, loader, criterion, bs):
+    total_loss = 0.0
+    total_err = 0.0
+    total_epoch = 0
+    i = 0
+    for feature, label in loader:
+        # run on GPU if possible
+        if torch.cuda.is_available():
+            features = feature[0].squeeze().cuda()
+            labels = feature[1].squeeze().cuda()
+        else:
+            features = feature[0].squeeze()
+            labels = feature[1].squeeze()
+        outputs = model(features)
+        loss = criterion(outputs, labels)
+        total_loss += loss.item()
+        i += 1
+    loss = float(total_loss) / (i + 1) /bs
+    return loss
+
 def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     '''
     train the data
@@ -276,7 +370,7 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     # load in data and create accuracy arrays
     train_loader, val_loader, test_loader = load_data(bs, hilbert)
-    train_loss, train_acc, val_acc, iters = [], [], [], []
+    train_loss, train_acc, val_acc, val_loss, iters = [], [], [], [], []
 
     # Training
     start_time = time.time()
@@ -310,12 +404,13 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
         train_loss.append(float(lo)/bs/j)           # compute loss
         train_acc.append(get_accuracy(model, train_loader)[0]) # compute train_acc
         val_acc.append(get_accuracy(model, val_loader)[0])   # compute val_acc
-        print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]))
+        val_loss.append(get_loss(model, val_loader, criterion, bs))
+        print("Epoch: " + str(epoch) + ', train acc: ' + str(train_acc[-1]) + ', train loss: ' + str(float(train_loss[-1])) + ', valid acc: ' + str(val_acc[-1]) + ", val_loss: " + str(float(val_loss[-1])))
         if hilbert == True:
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN2/models/model_2layer32_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -324,18 +419,19 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
     print("Total time elapsed: " + str(elapsed/60/60) + " hours.")
     print("Final Training Accuracy: {}".format(train_acc[-1]))
     print("Final Validation Accuracy: {}".format(val_acc[-1]))
-    return iters, train_loss, train_acc, val_acc, model.name, bs, lr, ne
+    return iters, train_loss, train_acc, val_acc, val_loss, model.name, bs, lr, ne
 
-def plot_acc_loss(iters, losses, train_acc, val_acc, name, bs, lr, ne, hilbert = True):
+def plot_acc_loss(iters, losses, train_acc, val_acc, val_loss, name, bs, lr, ne, hilbert = True):
     if hilbert == True:
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN2/"
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
     ax1.plot(iters, losses, bs, label = 'Train')
+    ax1.plot(iters, val_loss, bs, label = 'Validation')
     ax1.set_xlabel('Iterations')
     ax1.set_ylabel('Loss')
     ax1.set_ylim(min(losses), max(losses))
@@ -354,14 +450,16 @@ use_cuda = True
 model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
-iters, train_loss, train_acc, val_acc, name, bs, lr, ne = training(model, 64, 50, 0.0001, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, name + "auto32", bs, lr, ne, True)
-##'
+##
+iters, train_loss, train_acc, val_acc, val_loss, name, bs, lr, ne = training(model, 64, 15, 0.001, True)
+plot_acc_loss(iters, train_loss, train_acc, val_acc, val_loss, name + "2layer32", bs, lr, ne, True)
+
+##
 bs = 64
 ne = 10
 lr = 0.0001
-#model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("CNN2", bs, lr, ne)
-model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN/models/model_customlabel_CNN2_bs64_lr0.0001_epoch10"
+#model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN2/models/model_customlabel_{0}_bs{1}_lr{2}_epoch{3}".format("CNN2", bs, lr, ne)
+model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/autoCNN2/models/model_customlabel_CNN2_bs64_lr0.001_epoch10"
 state = torch.load(model_path)
 use_cuda = True
 model = CNN2()
@@ -371,9 +469,27 @@ model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data(bs, True)
 test_acc = get_accuracy(model, test_loader)
+
+for i in test_loader:
+    #print(i[0][-1][-1][0].tolist())
+    break
 print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
-print("Confusion Matricies:")
+#print("Confusion Matricies:")
 label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN', 'TBN', 'TUB', 'PNO', 'PER']
+result = []
+
 for i in range(len(test_acc[1])):
     print(label_dic[i])
     print(test_acc[1][i])
+    # if test_acc[1][i][0][0] > 0.5:
+    #     result.append(float(1))
+
+
+    # elif test_acc[1][i][1][1] > 0.5:
+    #     result.append(float(0))
+    # else:
+    #     result.append(0.5)
+#print(result)
+
+##
+[model_2layer32_CNN2_bs64_lr0.0001_epoch10, model_2layer32_CNN2_bs64_lr0.001_epoch30, model_2layer32_CNN2_bs64_lr0.0001_epoch30, model_2layer32_CNN2_bs64_lr0.001_epoch50, model_2layer32_CNN2_bs64_lr0.0005_epoch10, model_2layer32_CNN2_bs64_lr0.0005_epoch15, model_3layer_CNN2_bs64_lr0.001_epoch10, model_3layer_CNN2_bs64_lr0.001_epoch50, model_3layer50_CNN2_bs64_lr0.001_epoch10, model_3layer50_CNN2_bs64_lr0.001_epoch30, model_3layer350_CNN2_bs64_lr0.0001_epoch30, model_3layer350_CNN2_bs64_lr0.0005_epoch30, model_customlabel_CNN2_bs64_lr0.001_epoch10]
