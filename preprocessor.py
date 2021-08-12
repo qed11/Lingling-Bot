@@ -58,10 +58,12 @@ label_dic = ['VLN', 'VLA', 'CEL', 'DBS', 'FLT', 'CLT', 'OBO', 'BSN', 'TPT', 'FHN
 def label_data(filename):
   fn = filename.upper()
   labels = fn.split('.')[0].split('_')
+  #print(labels)
   out = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
   for i, instrument in enumerate(label_dic):
-    if instrument in labels:
-      out[i] = 1
+    for j in labels:
+      if instrument in j:
+        out[i] = 1
   return out
 
 def hilbert_data(file, sample_freq = 22050, n_fft = 65536, win_len = 2048, size = 128, fmin = 5, fmax = 8000):

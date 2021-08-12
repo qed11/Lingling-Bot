@@ -23,6 +23,61 @@ np.random.seed(1000)
 torch.manual_seed(1000)
 torch.cuda.manual_seed(1000)
 
+def save_data(win_len = 4096, hilbert = True, save_name = None):
+    """
+    sort datasets for the labelled data
+    win_len is the how many samples are taken from a music clip
+    hilbert indiciates whether the data is mapped with hilbert curves or not
+    set_percent indicates the % of test/validation
+    save_name is the name used to save the datasets
+
+    returns the save_path of the saved data
+    """
+    dataset = None
+    labels = None
+    # old_dir is where this file is in: ".../Lingling-Bot/"
+    old_dir = os.getcwd()
+    labelled_dir = old_dir + "/Downloads/Test/horn/" #Audios/labelled2/"
+    save_path = old_dir + "/Data"
+    for file in os.listdir(labelled_dir):
+        # For each .wav file in the downloaded path
+        if file.endswith(".wav"):
+            file = labelled_dir + file
+            # If hilbert is required, save the .wav files as hilbert curve data
+            if hilbert:
+                data, label = hilbert_data(file, win_len = win_len)
+                # Convert data and labels to tensors
+                data, label = torch.Tensor(list(data)), torch.Tensor(list(label))
+                if dataset == None:
+                    dataset = data
+                    labels = label
+                else:
+                    dataset = torch.cat((dataset, data))
+                    labels = torch.cat((labels, label))
+            # Else, save the .wav files as spectrogram data
+            else:
+                data, label = spectrogram_data(file, win_len = win_len)
+                # Convert data and labels to tensors
+                data, label = torch.Tensor(list(data)), torch.Tensor(list(label))
+                if dataset == None:
+                    dataset = data
+                    labels = label
+                else:
+                    if data.shape[1] == 128 and data.shape[2] == 128:
+                        dataset = torch.cat((dataset, data))
+                        labels = torch.cat((labels, label))
+                    else:
+                        print("skip")
+                        print(data.shape)
+
+    if hilbert:
+        save_path = save_path + "/Hilbert/labelled/" + save_name + '.pt'
+    else:
+        save_path = save_path + "/Spectrogram/labelled/" + save_name + '.pt'
+    full_set = dt.TensorDataset(dataset, labels)
+    torch.save(full_set, save_path)
+    return save_path
+
 ## get the data
 def get_data(save_path = None, set_percent = 0.1, bs = 1):
     '''
@@ -37,7 +92,8 @@ def get_data(save_path = None, set_percent = 0.1, bs = 1):
     test = dt.DataLoader(testing, batch_size = bs, shuffle=True)
     return train, val, test
 
-training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/labelled_hilbert_new.pt")
+save_path = save_data(win_len = 4096, hilbert = True, save_name = "horn")
+training_hilb, validation_hilb, testing_hilb = get_data(save_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/Hilbert/labelled/horn.pt")
 
 ## properly save labelled data
 def save_with_labels(loader, size, name, hilbert = True):
@@ -48,7 +104,7 @@ def save_with_labels(loader, size, name, hilbert = True):
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/autoCNN2/" + name + "/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/"+ n +"/horn/" + name + "/"
     # define transformations
     transformations = transforms.Compose([
         transforms.ToPILImage(),
@@ -299,8 +355,8 @@ class CNN2(nn.Module):
 
         # use relu as activation function
         x = F.relu(self.fc1(x))
-        #x = F.relu(self.fc2(x))
         x = F.relu(self.fc2(x))
+        #x = F.relu(self.fc3(x))
         #x = F.relu(self.fc3(x))
         #print(x[0])
         #m = nn.Sigmoid()
@@ -412,7 +468,7 @@ def training(model = CNN2(), bs = 27, ne = 1, lr = 0.001, hilbert = True):
             n = "Hilbert"
         else:
             n = "Spectrogram"
-        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN2/models/model_2layer32_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
+        model_path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/piano/models/model_3layer50_{0}_bs{1}_lr{2}_epoch{3}".format(model.name, bs, lr, ne)
         torch.save(model.state_dict(), model_path)
 
     print('Finished Training')
@@ -428,7 +484,7 @@ def plot_acc_loss(iters, losses, train_acc, val_acc, val_loss, name, bs, lr, ne,
         n = "Hilbert"
     else:
         n = "Spectrogram"
-    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/autoCNN2/"
+    path = "/Users/sarinaxi/Desktop/Lingling-Bot/Data/" + n + "/piano/"
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
 
@@ -453,8 +509,9 @@ model = CNN2()
 if use_cuda and torch.cuda.is_available():
     model.cuda()
 ##
-iters, train_loss, train_acc, val_acc, val_loss, name, bs, lr, ne = training(model, 64, 10, 0.001, True)
-plot_acc_loss(iters, train_loss, train_acc, val_acc, val_loss, name + "best", bs, lr, ne, True)
+iters, train_loss, train_acc, val_acc, val_loss, name, bs, lr, ne = training(model, 64, 10, 0.001, False)
+##
+plot_acc_loss(iters, train_loss, train_acc, val_acc, val_loss, name + "3layer502", bs, lr, ne, False)
 
 ##
 bs = 64
@@ -470,10 +527,10 @@ if use_cuda and torch.cuda.is_available():
 model.load_state_dict(state)
 
 train_loader, val_loader, test_loader = load_data(bs, True)
-test_acc = get_accuracy(model, test_loader)
+test_acc = get_accuracy(model, train_loader)
 
 for i in test_loader:
-    #print(i[0][-1][-1][0].tolist())
+    print(i[0][-1][-1][0].tolist())
     break
 print("test accuracy:", test_acc[0]) # 0.7158172778123058 for (64, 10, 0.001)
 #print("Confusion Matricies:")
@@ -483,14 +540,12 @@ result = []
 for i in range(len(test_acc[1])):
     print(label_dic[i])
     print(test_acc[1][i])
+
     # if test_acc[1][i][0][0] > 0.5:
     #     result.append(float(1))
-
+    #
     # elif test_acc[1][i][1][1] > 0.5:
     #     result.append(float(0))
     # else:
     #     result.append(0.5)
 #print(result)
-
-##
-[model_2layer32_CNN2_bs64_lr0.0001_epoch10, model_2layer32_CNN2_bs64_lr0.001_epoch30, model_2layer32_CNN2_bs64_lr0.0001_epoch30, model_2layer32_CNN2_bs64_lr0.001_epoch50, model_2layer32_CNN2_bs64_lr0.0005_epoch10, model_2layer32_CNN2_bs64_lr0.0005_epoch15, model_3layer_CNN2_bs64_lr0.001_epoch10, model_3layer_CNN2_bs64_lr0.001_epoch50, model_3layer50_CNN2_bs64_lr0.001_epoch10, model_3layer50_CNN2_bs64_lr0.001_epoch30, model_3layer350_CNN2_bs64_lr0.0001_epoch30, model_3layer350_CNN2_bs64_lr0.0005_epoch30, model_customlabel_CNN2_bs64_lr0.001_epoch10]
